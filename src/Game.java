@@ -293,7 +293,7 @@ public class Game extends JPanel {
 
     }
 
-
+// testing
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
