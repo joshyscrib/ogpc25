@@ -19,7 +19,7 @@ public class Game extends JPanel {
     private int mouseY;
 
     private int playerX = 250;
-    private int playerY = WORLD_HEIGHT - 400;
+    private int playerY = WORLD_HEIGHT - 450;
     private int velocityY = 0;
     private boolean isJumping = false;
     private boolean[] keys = new boolean[256];
@@ -29,10 +29,11 @@ public class Game extends JPanel {
     private boolean placingTile = false;
     private boolean mousePressed = false;
     public int tilePlaceType = 1;
-    private static final int WORLD_WIDTH = 7680; // Larger world width
-    private static final int WORLD_HEIGHT = 7680; // Larger world height
+    private static final int WORLD_WIDTH = 4562; // Larger world width
+    private static final int WORLD_HEIGHT = 1540; // Larger world height
     private int cameraX = 0; // Camera position
-    private int cameraY = 0;
+    private int cameraY = 128;
+    public Integer[][] tileNums = new Integer[gridRows][gridCols];
     public Game() {
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
         screenWidth = screenSize.width - WINDOW_MARGIN;
@@ -52,6 +53,16 @@ public class Game extends JPanel {
                 keys[e.getKeyCode()] = true;
                 if (e.getKeyCode() == KeyEvent.VK_G) {
                     showGrid = !showGrid;
+                }
+                if (e.getKeyCode() == KeyEvent.VK_SPACE) {
+                    for(int i = 0; i < gridCols; i++){
+                       for(int j = 0; j < gridRows; j++){
+                           tileNums[i][j] = tiles[i][j].tileType;
+                       }
+
+                    }
+                    System.out.println(tileNums);
+
                 }
             }
 
@@ -105,7 +116,7 @@ public class Game extends JPanel {
                 } else if (e.getButton() == MouseEvent.BUTTON3) {
                     // Right click: Cycle tile type
                     tilePlaceType++;
-                    if (tilePlaceType > 2) {
+                    if (tilePlaceType > 3) {
                         tilePlaceType = 1;
                     }
                 }
@@ -128,11 +139,12 @@ public class Game extends JPanel {
         switch(type){
             case 1:
                 tiles[row][col] = new AirTile();
-                System.out.println("air, " + mouseX / 32 + " : " + mouseY / 32);
                 break;
             case 2:
                 tiles[row][col] = new BlockTile();
-                System.out.println("block, " + mouseX / 32 + " : " + mouseY / 32);
+                break;
+            case 3:
+                tiles[row][col] = new BoundaryTile();
                 break;
         }
     }
@@ -156,8 +168,8 @@ public class Game extends JPanel {
     private void initializeTiles() {
         for (int row = 0; row < gridRows; row++) {
             for (int col = 0; col < gridCols; col++) {
-                if (row >= gridRows - 8) {
-                    tiles[row][col] = new BlockTile(); // Solid floor tiles
+                if (row >= gridRows - 12 || row <= 13 || col <= 1 || col >= gridCols - 2) {
+                    tiles[row][col] = new BoundaryTile(); // Solid floor tiles
                 } else {
                     tiles[row][col] = new AirTile(); // Transparent tiles
                 }
@@ -289,7 +301,6 @@ public class Game extends JPanel {
             isJumping = true;
         }
         cameraX = Math.max(0, Math.min(playerX - screenWidth / 2, WORLD_WIDTH - screenWidth));
-        cameraY = Math.max(0, Math.min(playerY - screenHeight / 2, WORLD_HEIGHT - screenHeight));
 
     }
 
@@ -309,13 +320,11 @@ public class Game extends JPanel {
             for (int col = startCol; col < endCol; col++) {
                 Tile tile = tiles[row][col];
                 switch (tile.tileType) {
-                    case 1:
-                        g.setColor(new Color(0, 0, 0, 0));
-                        break;
-                    case 2:
-                        g.setColor(new Color(88, 47, 40));
-                        break;
+                    case 1 -> g.setColor(new Color(118, 77, 70));
+                    case 2 -> g.setColor(new Color(10, 190, 30));
+                    case 3 -> g.setColor(new Color(70, 47, 40));
                 }
+
                 int drawX = col * TILE_SIZE - cameraX;
                 int drawY = row * TILE_SIZE - cameraY;
                 g.fillRect(drawX, drawY, TILE_SIZE, TILE_SIZE);
