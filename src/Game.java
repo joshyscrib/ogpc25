@@ -209,7 +209,7 @@ public class Game extends JPanel {
                 if(obj.solid == true && player.x >= obj.x && player.x <= obj.x + obj.size && player.y == 0){}
             }
         }
-
+//test
         if (keys[KeyEvent.VK_D]) {
             // Move right
             int targetX = player.x + player.MOVE_SPEED;  // Target position if no collision
