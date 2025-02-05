@@ -28,7 +28,7 @@ public class Game extends JPanel {
     private boolean mousePressed = false;
     public int tilePlaceType = 1;
     private static final int WORLD_WIDTH = 4562; // Larger world width
-    private static final int WORLD_HEIGHT = 1540; // Larger world height
+    private static final int WORLD_HEIGHT = 1312; // Larger world height
     private int cameraX = 0; // Camera position
     private int cameraY = 128;
     public Integer[][] tileNums = new Integer[gridRows][gridCols];
@@ -39,7 +39,7 @@ public class Game extends JPanel {
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
         screenWidth = screenSize.width - WINDOW_MARGIN;
         screenHeight = screenSize.height - WINDOW_MARGIN;
-
+        System.out.println(screenWidth + " : " + screenHeight);
 
         tiles = new Tile[gridRows][gridCols];
         initializeTiles();
@@ -61,7 +61,6 @@ public class Game extends JPanel {
                        }
 
                     }
-                    System.out.println(tileNums);
 
                 }
                 */
@@ -170,7 +169,7 @@ public class Game extends JPanel {
     private void initializeTiles() {
         for (int row = 0; row < gridRows; row++) {
             for (int col = 0; col < gridCols; col++) {
-                if (row >= gridRows - 12 || row <= 13 || col <= 1 || col >= gridCols - 2) {
+                if (row >= gridRows - 7 || row <= 8 || col <= 1 || col >= gridCols - 2) {
                     tiles[row][col] = new BoundaryTile(); // Solid floor tiles
                 } else {
                     tiles[row][col] = new AirTile(); // Transparent tiles
@@ -306,6 +305,7 @@ public class Game extends JPanel {
             isJumping = true;
         }
         cameraX = Math.max(0, Math.min(player.x - screenWidth / 2, WORLD_WIDTH - screenWidth));
+        cameraY = Math.max(0, Math.min(player.y - screenHeight / 2, WORLD_HEIGHT - screenHeight));
 
     }
 
@@ -342,7 +342,6 @@ public class Game extends JPanel {
         }
         for(Object o : objects){
             o.Paint(o.x - cameraX, o.y - cameraY, g);
-            System.out.println(o.x + " : " + (o.y ));
         }
         // Draw the player
         int playerDrawX = player.x - cameraX;
