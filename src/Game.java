@@ -1,14 +1,14 @@
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.util.ArrayList;
+
 
 public class Game extends JPanel {
     private static final int TILE_SIZE = 32;
-    private static final int PLAYER_WIDTH = 32;
-    private static final int PLAYER_HEIGHT = 64;
+    
     private static final int GRAVITY = 4;
-    private static final int JUMP_STRENGTH = -35;
-    private static final int MOVE_SPEED = 10;
+    
     private static final int WINDOW_MARGIN = 50;
 
     private int screenWidth;
@@ -18,8 +18,6 @@ public class Game extends JPanel {
     private int mouseX;
     private int mouseY;
 
-    private int playerX = 250;
-    private int playerY = WORLD_HEIGHT - 450;
     private int velocityY = 0;
     private boolean isJumping = false;
     private boolean[] keys = new boolean[256];
@@ -34,6 +32,9 @@ public class Game extends JPanel {
     private int cameraX = 0; // Camera position
     private int cameraY = 128;
     public Integer[][] tileNums = new Integer[gridRows][gridCols];
+    public ArrayList<Object> objects = new ArrayList<Object>();
+    Player player;
+
     public Game() {
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
         screenWidth = screenSize.width - WINDOW_MARGIN;
@@ -41,7 +42,6 @@ public class Game extends JPanel {
 
 
         tiles = new Tile[gridRows][gridCols];
-
         initializeTiles();
 
         setFocusable(true);
@@ -54,7 +54,7 @@ public class Game extends JPanel {
                 if (e.getKeyCode() == KeyEvent.VK_G) {
                     showGrid = !showGrid;
                 }
-                if (e.getKeyCode() == KeyEvent.VK_SPACE) {
+               /* if (e.getKeyCode() == KeyEvent.VK_SPACE) {
                     for(int i = 0; i < gridCols; i++){
                        for(int j = 0; j < gridRows; j++){
                            tileNums[i][j] = tiles[i][j].tileType;
@@ -64,6 +64,7 @@ public class Game extends JPanel {
                     System.out.println(tileNums);
 
                 }
+                */
             }
 
             @Override
@@ -127,16 +128,17 @@ public class Game extends JPanel {
                 mousePressed = false;
             }
         });
-
+        player = new Player(250, WORLD_HEIGHT - 450);
         gridCols = WORLD_WIDTH / TILE_SIZE; // Update based on world size
         gridRows = WORLD_HEIGHT / TILE_SIZE;
         tiles = new Tile[gridRows][gridCols];
         initializeTiles();
-
+        Crate startCrate = new Crate(400,700);
+        objects.add(startCrate);
     }
 
     public void placeTile(int type, int col, int row) {
-        switch(type){
+        switch (type) {
             case 1:
                 tiles[row][col] = new AirTile();
                 break;
@@ -182,14 +184,14 @@ public class Game extends JPanel {
         // Handle horizontal movement with collision detection
         if (keys[KeyEvent.VK_A]) {
             // Move left
-            int targetX = playerX - MOVE_SPEED;  // Target position if no collision
+            int targetX = player.x - player.MOVE_SPEED;  // Target position if no collision
             int colLeft = targetX / TILE_SIZE;
-            int colRight = (targetX + PLAYER_WIDTH - 1) / TILE_SIZE;
+            int colRight = (targetX + player.width - 1) / TILE_SIZE;
 
             // Check for collision with the tiles
             if (colLeft >= 0 && colRight < gridCols) {
                 boolean collision = false;
-                for (int row = (playerY / TILE_SIZE); row < (playerY + PLAYER_HEIGHT) / TILE_SIZE; row++) {
+                for (int row = (player.y / TILE_SIZE); row < (player.y + player.height) / TILE_SIZE; row++) {
                     if (tiles[row][colLeft].isSolid() || tiles[row][colRight].isSolid()) {
                         collision = true;
                         break;
@@ -197,24 +199,27 @@ public class Game extends JPanel {
                 }
 
                 if (!collision) {
-                    playerX = targetX;  // Move the player to the new position
+                    player.x = targetX;  // Move the player to the new position
                 } else {
                     // Stop the player at the left boundary of the wall
-                    playerX = (colLeft + 1) * TILE_SIZE;
+                    player.x = (colLeft + 1) * TILE_SIZE;
                 }
+            }
+            for(Object obj : objects){
+                if(obj.solid == true && player.x >= obj.x && player.x <= obj.x + obj.size && player.y == 0){}
             }
         }
 
         if (keys[KeyEvent.VK_D]) {
             // Move right
-            int targetX = playerX + MOVE_SPEED;  // Target position if no collision
+            int targetX = player.x + player.MOVE_SPEED;  // Target position if no collision
             int colLeft = targetX / TILE_SIZE;
-            int colRight = (targetX + PLAYER_WIDTH - 1) / TILE_SIZE;
+            int colRight = (targetX + player.width - 1) / TILE_SIZE;
 
             // Check for collision with the tiles
             if (colLeft >= 0 && colRight < gridCols) {
                 boolean collision = false;
-                for (int row = (playerY / TILE_SIZE); row <= (playerY + PLAYER_HEIGHT - 1) / TILE_SIZE; row++) {
+                for (int row = (player.y / TILE_SIZE); row <= (player.y + player.height - 1) / TILE_SIZE; row++) {
                     if (tiles[row][colRight].isSolid()) {
                         collision = true;
                         break;
@@ -222,10 +227,10 @@ public class Game extends JPanel {
                 }
 
                 if (!collision) {
-                    playerX = targetX;  // Move the player to the new position
+                    player.x = targetX;  // Move the player to the new position
                 } else {
                     // Align the player to the left edge of the obstacle
-                    playerX = colRight * TILE_SIZE - PLAYER_WIDTH;
+                    player.x = colRight * TILE_SIZE - player.width;
                 }
             }
         }
@@ -259,15 +264,15 @@ public class Game extends JPanel {
         // Vertical movement
         while (remaining > 0) {
             int move = Math.min(TILE_SIZE / 4, remaining);
-            int nextY = playerY + step * move;
-            int row = (nextY + PLAYER_HEIGHT) / TILE_SIZE;
-            int colLeft = playerX / TILE_SIZE;
-            int colRight = (playerX + PLAYER_WIDTH - 1) / TILE_SIZE;
+            int nextY = player.y + step * move;
+            int row = (nextY + player.height) / TILE_SIZE;
+            int colLeft = player.x / TILE_SIZE;
+            int colRight = (player.x + player.width - 1) / TILE_SIZE;
 
             // Check for collisions below (falling and landing)
             if (step > 0) {
                 if (row < gridRows && (tiles[row][colLeft].isSolid() || tiles[row][colRight].isSolid())) {
-                    playerY = row * TILE_SIZE - PLAYER_HEIGHT;
+                    player.y = row * TILE_SIZE - player.height;
                     velocityY = 0;
                     isJumping = false;
                     break;
@@ -278,33 +283,33 @@ public class Game extends JPanel {
             if (step < 0) {
                 int ceilingRow = (nextY) / TILE_SIZE;
                 if (ceilingRow >= 0 && (tiles[ceilingRow][colLeft].isSolid() || tiles[ceilingRow][colRight].isSolid())) {
-                    playerY = (ceilingRow + 1) * TILE_SIZE;
+                    player.y = (ceilingRow + 1) * TILE_SIZE;
                     velocityY = 0;
                     break;
                 }
             }
 
             // Update the player position if no collision
-            playerY = nextY;
+            player.y = nextY;
             remaining -= move;
         }
 
         // Prevent player from moving off-screen horizontally
-        if (playerX < 0) playerX = 0;
-        if (playerX + PLAYER_WIDTH > WORLD_WIDTH) {
-            playerX = WORLD_WIDTH - PLAYER_WIDTH;
+        if (player.x < 0) player.x = 0;
+        if (player.x + player.width > WORLD_WIDTH) {
+            player.x = WORLD_WIDTH - player.width;
         }
 
         // Jumping mechanic
         if (keys[KeyEvent.VK_SPACE] && !isJumping) {
-            velocityY = JUMP_STRENGTH;
+            velocityY = player.JUMP_STRENGTH;
             isJumping = true;
         }
-        cameraX = Math.max(0, Math.min(playerX - screenWidth / 2, WORLD_WIDTH - screenWidth));
+        cameraX = Math.max(0, Math.min(player.x - screenWidth / 2, WORLD_WIDTH - screenWidth));
 
     }
 
-// testing
+    // testing
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -335,11 +340,14 @@ public class Game extends JPanel {
                 }
             }
         }
-
+        for(Object o : objects){
+            o.Paint(o.x - cameraX, o.y - cameraY, g);
+            System.out.println(o.x + " : " + (o.y ));
+        }
         // Draw the player
-        int playerDrawX = playerX - cameraX;
-        int playerDrawY = playerY - cameraY;
+        int playerDrawX = player.x - cameraX;
+        int playerDrawY = player.y - cameraY;
         g.setColor(Color.RED);
-        g.fillRect(playerDrawX, playerDrawY, PLAYER_WIDTH, PLAYER_HEIGHT);
+        g.fillRect(playerDrawX, playerDrawY, player.width, player.height);
     }
 }
