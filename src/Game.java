@@ -1,14 +1,15 @@
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.lang.annotation.Target;
 import java.util.ArrayList;
 
 
 public class Game extends JPanel {
     private static final int TILE_SIZE = 32;
-    
+
     private static final int GRAVITY = 4;
-    
+
     private static final int WINDOW_MARGIN = 50;
 
     private int screenWidth;
@@ -20,6 +21,8 @@ public class Game extends JPanel {
 
     private int velocityY = 0;
     private boolean isJumping = false;
+    public int curFloor = 1;
+    public int waterHeight;
     private boolean[] keys = new boolean[256];
     private boolean showGrid = false;
     private Tile[][] tiles;
@@ -34,6 +37,7 @@ public class Game extends JPanel {
     public Integer[][] tileNums = new Integer[gridRows][gridCols];
     public ArrayList<Object> objects = new ArrayList<Object>();
     Player player;
+    public Position spawnPoint = new Position(250, WORLD_HEIGHT - 450);
 
     public Game() {
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
@@ -116,7 +120,7 @@ public class Game extends JPanel {
                 } else if (e.getButton() == MouseEvent.BUTTON3) {
                     // Right click: Cycle tile type
                     tilePlaceType++;
-                    if (tilePlaceType > 3) {
+                    if (tilePlaceType > 4) {
                         tilePlaceType = 1;
                     }
                 }
@@ -132,7 +136,7 @@ public class Game extends JPanel {
         gridRows = WORLD_HEIGHT / TILE_SIZE;
         tiles = new Tile[gridRows][gridCols];
         initializeTiles();
-        Crate startCrate = new Crate(400,700);
+        Crate startCrate = new Crate(400, 700);
         objects.add(startCrate);
     }
 
@@ -146,6 +150,9 @@ public class Game extends JPanel {
                 break;
             case 3:
                 tiles[row][col] = new BoundaryTile();
+                break;
+            case 4:
+                tiles[row][col] = new KillTile();
                 break;
         }
     }
@@ -179,6 +186,10 @@ public class Game extends JPanel {
     }
 
     public void update() {
+                if(tiles[(int)Math.floor(player.x / TILE_SIZE)][(int)Math.floor((player.y + player.height) / TILE_SIZE)].tileType == 4){
+                    respawn();
+                }
+
 
         // Handle horizontal movement with collision detection
         if (keys[KeyEvent.VK_A]) {
@@ -195,6 +206,10 @@ public class Game extends JPanel {
                         collision = true;
                         break;
                     }
+                    if (tiles[row][colLeft].tileType == 4 || tiles[row][colRight].tileType == 4) {
+                        respawn();
+                        break;
+                    }
                 }
 
                 if (!collision) {
@@ -204,8 +219,9 @@ public class Game extends JPanel {
                     player.x = (colLeft + 1) * TILE_SIZE;
                 }
             }
-            for(Object obj : objects){
-                if(obj.solid == true && player.x >= obj.x && player.x <= obj.x + obj.size && player.y == 0){}
+            for (Object obj : objects) {
+                if (obj.solid == true && player.x >= obj.x && player.x <= obj.x + obj.size && player.y == 0) {
+                }
             }
         }
 //test
@@ -223,6 +239,10 @@ public class Game extends JPanel {
                         collision = true;
                         break;
                     }
+                    if (tiles[row][colRight].tileType == 4) {
+                        respawn();
+                        break;
+                    }
                 }
 
                 if (!collision) {
@@ -234,8 +254,50 @@ public class Game extends JPanel {
             }
         }
 
+        for (Object o : objects) {
+            int targetX = 0;
+            int targetY = 0;
+            switch (o.moveDirection) {
+                case Up:
+                    targetX = o.x;
+                    targetY = o.y - o.speed;
+                    break;
+                case Down:
+                    targetX = o.x;
+                    targetY = o.y + o.speed;
+                    break;
+                case Left:
+                    targetX = o.x - o.speed;
+                    targetY = o.y;
+                    break;
+                case Right:
+                    targetX = o.x + o.speed;
+                    targetY = o.y;
+                    break;
+                case None:
+                    targetX = o.x;
+                    targetY = o.y;
+                    break;
+            }
+            Position targetPosition = new Position(targetX, targetY);
+            boolean didCollide = false;
+            for (int j = 0; j < gridCols; j++) {
+                for (int i = 0; i < gridRows; i++) {
+                    if (tiles[i][j].isSolid) {
+                        if ((CollisionDetection.DoThingsCollide(targetPosition, o.width, o.height, new Position(i * TILE_SIZE, j * TILE_SIZE), 32, 32))) {
+                            didCollide = true;
+                            break;
+                        }
+                    }
+                }
+            }
 
-        // Handle vertical movement and gravity
+            if (!didCollide) {
+                o.x = targetPosition.x;
+                o.y = targetPosition.y;
+            }
+        }
+
         velocityY += GRAVITY;
         int step = Integer.signum(velocityY);
         int remaining = Math.abs(velocityY);
@@ -310,6 +372,10 @@ public class Game extends JPanel {
     }
 
     // testing
+    public void respawn(){
+        player.x = spawnPoint.x;
+        player.y = spawnPoint.y;
+    }
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -328,6 +394,7 @@ public class Game extends JPanel {
                     case 1 -> g.setColor(new Color(118, 77, 70));
                     case 2 -> g.setColor(new Color(10, 190, 30));
                     case 3 -> g.setColor(new Color(70, 47, 40));
+                    case 4 -> g.setColor(new Color(255, 1, 1));
                 }
 
                 int drawX = col * TILE_SIZE - cameraX;
@@ -340,7 +407,7 @@ public class Game extends JPanel {
                 }
             }
         }
-        for(Object o : objects){
+        for (Object o : objects) {
             o.Paint(o.x - cameraX, o.y - cameraY, g);
         }
         // Draw the player

@@ -8,6 +8,10 @@ public class Crate extends Object{
         x = placeX;
         y = placeY;
         solid = true;
+        gravity = 3;
+        moveDirection = Direction.Down;
+        width = 96;
+        height = 96;
     }
 
     @Override
