@@ -34,7 +34,7 @@ public class Game extends JPanel {
     private static final int WORLD_HEIGHT = 1312; // Larger world height
     private int cameraX = 0; // Camera position
     private int cameraY = 128;
-    public Integer[][] tileNums = new Integer[gridRows][gridCols];
+    public Integer[][] tileNums = new Integer[gridCols][gridRows];
     public ArrayList<Object> objects = new ArrayList<Object>();
     Player player;
     public Position spawnPoint = new Position(250, WORLD_HEIGHT - 450);
@@ -144,17 +144,16 @@ public class Game extends JPanel {
 
         switch (type) {
             case 1:
-                tiles[row][col] = new AirTile();
-                System.out.println(tiles[row][col].x + " : " + tiles[row][col].y);
+                tiles[col][row] = new AirTile();
                 break;
             case 2:
-                tiles[row][col] = new BlockTile();
+                tiles[col][row] = new BlockTile();
                 break;
             case 3:
-                tiles[row][col] = new BoundaryTile();
+                tiles[col][row] = new BoundaryTile();
                 break;
             case 4:
-                tiles[row][col] = new KillTile();
+                tiles[col][row] = new KillTile();
                 break;
         }
     }
@@ -176,8 +175,8 @@ public class Game extends JPanel {
     }
 
     private void initializeTiles() {
-        for (int row = 0; row < gridRows; row++) {
-            for (int col = 0; col < gridCols; col++) {
+        for (int col = 0; col < gridCols; col++) {
+            for (int row = 0; row < gridRows; row++) {
 
                 tiles[col][row] = new AirTile(); // Transparent tiles
                 tiles[col][row].x = col;
@@ -193,7 +192,7 @@ public class Game extends JPanel {
     }
 
     public void update() {
-                if(tiles[(int)Math.floor((player.y + player.height) / TILE_SIZE)][(int)Math.floor(player.x / TILE_SIZE)].tileType == 4){
+                if(tiles[(int)Math.floor(player.x / TILE_SIZE)][(int)Math.floor((player.y + player.height) / TILE_SIZE)].tileType == 4){
                     respawn();
                 }
 
@@ -208,12 +207,23 @@ public class Game extends JPanel {
             // Check for collision with the tiles
             if (colLeft >= 0 && colRight < gridCols) {
                 boolean collision = false;
+                //crate stuff
+                for(Object o : objects){
+                    if(o.getClass() == Crate.class){
+                        if(tiles[o.x - 1][o.y + (o.height - 2)].isSolid){
+
+                        }
+                    }
+                }
+
+
+
                 for (int row = (player.y / TILE_SIZE); row < (player.y + player.height) / TILE_SIZE; row++) {
-                    if (tiles[row][colLeft].isSolid() || tiles[row][colRight].isSolid()) {
+                    if (tiles[colLeft][row].isSolid() || tiles[colRight][row].isSolid()) {
                         collision = true;
                         break;
                     }
-                    if (tiles[row][colLeft].tileType == 4 || tiles[row][colRight].tileType == 4) {
+                    if (tiles[colLeft][row].tileType == 4 || tiles[colRight][row].tileType == 4) {
                         respawn();
                         break;
                     }
@@ -242,11 +252,11 @@ public class Game extends JPanel {
             if (colLeft >= 0 && colRight < gridCols) {
                 boolean collision = false;
                 for (int row = (player.y / TILE_SIZE); row <= (player.y + player.height - 1) / TILE_SIZE; row++) {
-                    if (tiles[row][colRight].isSolid()) {
+                    if (tiles[colRight][row].isSolid()) {
                         collision = true;
                         break;
                     }
-                    if (tiles[row][colRight].tileType == 4) {
+                    if (tiles[colRight][row].tileType == 4) {
                         respawn();
                         break;
                     }
@@ -330,31 +340,41 @@ public class Game extends JPanel {
         }
 
         // Vertical movement
+        boolean crateCollide = false;
         while (remaining > 0) {
             int move = Math.min(TILE_SIZE / 4, remaining);
             int nextY = player.y + step * move;
             int row = (nextY + player.height) / TILE_SIZE;
             int colLeft = player.x / TILE_SIZE;
             int colRight = (player.x + player.width - 1) / TILE_SIZE;
-
+            for(Object o : objects){
+                if(o.getClass() == Crate.class){
+                    if(CollisionDetection.DoThingsCollide(new Position(player.x, player.y), player.width, player.height, new Position(o.x,o.y), o.width, o.height)){
+                        crateCollide = true;
+                    }
+                    else{crateCollide = false;}
+                }
+            }
             // Check for collisions below (falling and landing)
             if (step > 0) {
-                if (row < gridRows && (tiles[row][colLeft].isSolid() || tiles[row][colRight].isSolid())) {
+                if (row < gridRows && (tiles[colLeft][row].isSolid() || tiles[colRight][row].isSolid()) || crateCollide) {
                     player.y = row * TILE_SIZE - player.height;
                     velocityY = 0;
                     isJumping = false;
                     break;
                 }
+
             }
 
             // Check for collisions above (ceiling while jumping)
             if (step < 0) {
                 int ceilingRow = (nextY) / TILE_SIZE;
-                if (ceilingRow >= 0 && (tiles[ceilingRow][colLeft].isSolid() || tiles[ceilingRow][colRight].isSolid())) {
+                if (ceilingRow >= 0 && (tiles[colLeft][ceilingRow].isSolid() || tiles[colRight][ceilingRow].isSolid())) {
                     player.y = (ceilingRow + 1) * TILE_SIZE;
                     velocityY = 0;
                     break;
                 }
+
             }
 
             // Update the player position if no collision
@@ -394,8 +414,8 @@ public class Game extends JPanel {
         int endRow = Math.min(gridRows, (cameraY + screenHeight) / TILE_SIZE + 1);
 
         // Draw tiles in the visible range
-        for (int row = startRow; row < endRow; row++) {
-            for (int col = startCol; col < endCol; col++) {
+        for (int col = startCol; col < endCol; col++) {
+            for (int row = startRow; row < endRow; row++) {
                 Tile tile = tiles[col][row];
                 switch (tile.tileType) {
                     case 1 -> g.setColor(new Color(118, 77, 70));
