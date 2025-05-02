@@ -1,7 +1,11 @@
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.IOException;
 import java.lang.annotation.Target;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 
 
@@ -27,6 +31,7 @@ public class Game extends JPanel {
     private boolean showGrid = false;
     private Tile[][] tiles;
 
+
     private boolean placingTile = false;
     private boolean mousePressed = false;
     public int tilePlaceType = 1;
@@ -38,6 +43,7 @@ public class Game extends JPanel {
     public ArrayList<Object> objects = new ArrayList<Object>();
     Player player;
     public Position spawnPoint = new Position(250, WORLD_HEIGHT - 450);
+    public boolean respawning = false;
 
     public Game() {
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
@@ -45,8 +51,8 @@ public class Game extends JPanel {
         screenHeight = screenSize.height - WINDOW_MARGIN;
         System.out.println(screenWidth + " : " + screenHeight);
 
-     //   tiles = new Tile[gridCols][gridRows];
-        initializeTiles();
+        //   tiles = new Tile[gridCols][gridRows];
+     //   initializeTiles();
 
         setFocusable(true);
 
@@ -136,8 +142,6 @@ public class Game extends JPanel {
         gridRows = WORLD_HEIGHT / TILE_SIZE;
         tiles = new Tile[gridCols][gridRows];
         initializeTiles();
-        Crate startCrate = new Crate(400, 700);
-        objects.add(startCrate);
     }
 
     public void placeTile(int type, int col, int row) {
@@ -189,15 +193,85 @@ public class Game extends JPanel {
 
             }
         }
+       load();
     }
+    public void load(){
+        try {
+          String loadLvl =  Files.readString(Paths.get("C:\\Users\\josht\\OneDrive\\Documents\\GameLevels\\game1.txt"), StandardCharsets.UTF_8);
+        String[] stringArray = loadLvl.split(",");
+        for(int i = 0; i < stringArray.length; i++){
+            int col = 0;
+            int row = 0;
+         //   if(gridCols != 0){
+                col = i/gridRows;
+                row = i%gridRows;
+          //  }
 
+            int tileId = Integer.parseInt(stringArray[i]);
+
+            switch(Integer.parseInt(stringArray[i])){
+                case 1:
+                    tiles[col][row] = new AirTile();
+                    break;
+                case 2:
+                    tiles[col][row] = new BlockTile();
+                    break;
+                case 3:
+                    tiles[col][row] = new BoundaryTile();
+                    break;
+                case 4:
+                    tiles[col][row] = new KillTile();
+                    break;
+            }
+            tiles[col][row].x = col;
+            tiles[col][row].y = row;
+        }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+    public void save(){
+        StringBuilder tileSave = new StringBuilder();
+        for(int i = 0; i < gridCols; i++){
+            for(int j = 0; j < gridRows; j++){
+                tileSave.append(tiles[i][j].tileType);
+                tileSave.append(",");
+            }
+        }
+        String tileNums = tileSave.toString();
+        try {
+            Files.writeString(Paths.get("C:\\Users\\josht\\OneDrive\\Documents\\GameLevels\\game1.txt"), tileNums, StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+    int lastCrate = 0;
     public void update() {
-                if(tiles[(int)Math.floor(player.x / TILE_SIZE)][(int)Math.floor((player.y + player.height) / TILE_SIZE)].tileType == 4){
-                    respawn();
-                }
+        lastCrate++;
+        if (tiles[(int) Math.floor(player.x / TILE_SIZE)][(int) Math.floor((player.y + player.height) / TILE_SIZE)].tileType == 4) {
+            respawn();
 
+        }
+        boolean crateCollision = false;
 
         // Handle horizontal movement with collision detection
+        if(keys[KeyEvent.VK_ENTER]){
+            save();
+        }
+        if(keys[KeyEvent.VK_L]){
+            load();
+        }
+        if(keys[KeyEvent.VK_1] && lastCrate > 20){
+            Crate crate = new Crate(player.x + player.width, player.y - 128);
+            objects.add(crate);
+            lastCrate = 0;
+        }
+
+        if(keys[KeyEvent.VK_2] && lastCrate > 20        ){
+            SolidCrate scrate = new SolidCrate(player.x + player.width, player.y - 128);
+            objects.add(scrate);
+            lastCrate = 0;
+        }
         if (keys[KeyEvent.VK_A]) {
             // Move left
             int targetX = player.x - player.MOVE_SPEED;  // Target position if no collision
@@ -208,14 +282,27 @@ public class Game extends JPanel {
             if (colLeft >= 0 && colRight < gridCols) {
                 boolean collision = false;
                 //crate stuff
-                for(Object o : objects){
-                    if(o.getClass() == Crate.class){
-                        if(tiles[o.x - 1][o.y + (o.height - 2)].isSolid){
-
+                for (Object o : objects) {
+                    if (o.getClass() == Crate.class || o.getClass() == SolidCrate.class) {
+                        if (tiles[(o.x - 1) / TILE_SIZE][(o.y + (o.height - 2)) / TILE_SIZE].isSolid) {
+                            if (CollisionDetection.DoThingsCollide(new Position(targetX, player.y - 4), player.width, player.height, new Position(o.x, o.y + 5), o.width, o.height)) {
+                                crateCollision = true;
+                            }
                         }
+                                if (!tiles[(o.x - 1) / TILE_SIZE][(o.y + (o.height - 2)) / TILE_SIZE].isSolid) {
+                                    if (CollisionDetection.DoThingsCollide(new Position(targetX, player.y), player.width, player.height, new Position(o.x, o.y + 5), o.width, o.height)) {
+                                        if(player.y + player.height >= o.y + o.height - 6 && player.y + player.height <= o.y + o.height + 6 && o.getClass() == Crate.class){
+                                            o.x -= player.MOVE_SPEED;
+                                        }
+                                        else{
+                                            crateCollision = true;
+                                        }
+                                    }
+                                }
+
+
                     }
                 }
-
 
 
                 for (int row = (player.y / TILE_SIZE); row < (player.y + player.height) / TILE_SIZE; row++) {
@@ -225,13 +312,15 @@ public class Game extends JPanel {
                     }
                     if (tiles[colLeft][row].tileType == 4 || tiles[colRight][row].tileType == 4) {
                         respawn();
+                        targetX = player.x;
                         break;
                     }
                 }
 
-                if (!collision) {
+                if (!collision && !crateCollision) {
                     player.x = targetX;  // Move the player to the new position
-                } else {
+                }
+                else if(!crateCollision){
                     // Stop the player at the left boundary of the wall
                     player.x = (colLeft + 1) * TILE_SIZE;
                 }
@@ -250,7 +339,29 @@ public class Game extends JPanel {
 
             // Check for collision with the tiles
             if (colLeft >= 0 && colRight < gridCols) {
+
                 boolean collision = false;
+                for (Object o : objects) {
+                    if (o.getClass() == Crate.class || o.getClass() == SolidCrate.class) {
+                        if (tiles[(o.x + o.width + 1) / TILE_SIZE][(o.y + (o.height - 2)) / TILE_SIZE].isSolid) {
+                            if (CollisionDetection.DoThingsCollide(new Position(targetX, player.y), player.width, player.height, new Position(o.x, o.y + 5), o.width, o.height)) {
+                                crateCollision = true;
+                            }
+                        }
+                        if (!tiles[(o.x + o.width + 1) / TILE_SIZE][(o.y + (o.height - 2)) / TILE_SIZE].isSolid) {
+                            if (CollisionDetection.DoThingsCollide(new Position(targetX, player.y), player.width, player.height, new Position(o.x, o.y + 5), o.width, o.height)) {
+                                if(player.y + player.height >= o.y + o.height - 6 && player.y + player.height <= o.y + o.height + 6 && o.getClass() == Crate.class){
+                                    o.x += player.MOVE_SPEED;
+                                }
+                                else{
+                                    crateCollision = true;
+                                }
+                            }
+                        }
+
+
+                    }
+                }
                 for (int row = (player.y / TILE_SIZE); row <= (player.y + player.height - 1) / TILE_SIZE; row++) {
                     if (tiles[colRight][row].isSolid()) {
                         collision = true;
@@ -258,13 +369,13 @@ public class Game extends JPanel {
                     }
                     if (tiles[colRight][row].tileType == 4) {
                         respawn();
+                        targetX = player.x;
                         break;
                     }
                 }
-
-                if (!collision) {
+                if (!collision && !crateCollision) {
                     player.x = targetX;  // Move the player to the new position
-                } else {
+                } else if(!crateCollision){
                     // Align the player to the left edge of the obstacle
                     player.x = colRight * TILE_SIZE - player.width;
                 }
@@ -347,12 +458,14 @@ public class Game extends JPanel {
             int row = (nextY + player.height) / TILE_SIZE;
             int colLeft = player.x / TILE_SIZE;
             int colRight = (player.x + player.width - 1) / TILE_SIZE;
-            for(Object o : objects){
-                if(o.getClass() == Crate.class){
-                    if(CollisionDetection.DoThingsCollide(new Position(player.x, player.y), player.width, player.height, new Position(o.x,o.y), o.width, o.height)){
+            for (Object o : objects) {
+                if (o.getClass() == Crate.class || o.getClass() == SolidCrate.class) {
+                    if (CollisionDetection.DoThingsCollide(new Position(player.x, player.y), player.width, player.height, new Position(o.x, o.y ), o.width, o.height)) {
                         crateCollide = true;
+                        player.y = o.y - player.height - 1;
+                    } else {
+                        crateCollide = false;
                     }
-                    else{crateCollide = false;}
                 }
             }
             // Check for collisions below (falling and landing)
@@ -399,10 +512,12 @@ public class Game extends JPanel {
     }
 
     // testing
-    public void respawn(){
+    public void respawn() {
         player.x = spawnPoint.x;
         player.y = spawnPoint.y;
+        respawning = true;
     }
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);

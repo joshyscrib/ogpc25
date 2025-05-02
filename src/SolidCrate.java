@@ -1,13 +1,13 @@
 import java.awt.*;
 
-public class Crate extends Object{
+public class SolidCrate extends Object{
 
-    public Crate(int placeX, int placeY){
+    public SolidCrate(int placeX, int placeY){
         moveable = false;
         size = 96;
         x = placeX;
         y = placeY;
-        solid = false;
+        solid = true;
         gravity = 3;
         moveDirection = Direction.Down;
         width = 96;
@@ -16,7 +16,7 @@ public class Crate extends Object{
 
     @Override
     public void Paint(int paintX, int paintY, Graphics g) {
-        g.setColor(new Color(255, 165, 10));
+        g.setColor(Color.gray);
         g.fillRect(paintX, paintY, size, size);
     }
 }
