@@ -126,7 +126,7 @@ public class Game extends JPanel {
                 } else if (e.getButton() == MouseEvent.BUTTON3) {
                     // Right click: Cycle tile type
                     tilePlaceType++;
-                    if (tilePlaceType > 4) {
+                    if (tilePlaceType > 5) {
                         tilePlaceType = 1;
                     }
                 }
@@ -158,6 +158,9 @@ public class Game extends JPanel {
                 break;
             case 4:
                 tiles[col][row] = new KillTile();
+                break;
+            case 5:
+                tiles[col][row] = new DoorTile();
                 break;
         }
     }
@@ -222,6 +225,9 @@ public class Game extends JPanel {
                 case 4:
                     tiles[col][row] = new KillTile();
                     break;
+                case 5:
+                    tiles[col][row] = new DoorTile();
+                    break;
             }
             tiles[col][row].x = col;
             tiles[col][row].y = row;
@@ -251,6 +257,9 @@ public class Game extends JPanel {
         if (tiles[(int) Math.floor(player.x / TILE_SIZE)][(int) Math.floor((player.y + player.height) / TILE_SIZE)].tileType == 4) {
             respawn();
 
+        }
+        if(tiles[(int) Math.floor(player.x / TILE_SIZE + 1)][(int) Math.floor((player.y) / TILE_SIZE)].tileType == 5){
+            load();
         }
         boolean crateCollision = false;
 
@@ -537,6 +546,7 @@ public class Game extends JPanel {
                     case 2 -> g.setColor(new Color(10, 190, 30));
                     case 3 -> g.setColor(new Color(70, 47, 40));
                     case 4 -> g.setColor(new Color(255, 1, 1));
+                    case 5 -> g.setColor(new Color(30,150,250));
                 }
 
                 int drawX = col * TILE_SIZE - cameraX;
