@@ -541,6 +541,7 @@ public class Game extends JPanel {
         for (int col = startCol; col < endCol; col++) {
             for (int row = startRow; row < endRow; row++) {
                 Tile tile = tiles[col][row];
+
                 switch (tile.tileType) {
                     case 1 -> g.setColor(new Color(118, 77, 70));
                     case 2 -> g.setColor(new Color(10, 190, 30));
@@ -552,6 +553,8 @@ public class Game extends JPanel {
                 int drawX = col * TILE_SIZE - cameraX;
                 int drawY = row * TILE_SIZE - cameraY;
                 g.fillRect(drawX, drawY, TILE_SIZE, TILE_SIZE);
+                tile.drawTile(drawX, drawY, g);
+
 
                 if (showGrid) {
                     g.setColor(Color.GRAY);

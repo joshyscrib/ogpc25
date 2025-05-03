@@ -1,0 +1,16 @@
+    Draw Tile
+public void drawTile(int x, int y, Graphics gx) {
+        if(IMAGE == null){
+            try {
+                IMAGE = ImageIO.read(Game.class.getResource("FILE.png"));
+            }
+            catch(Exception ex){
+                System.out.println(ex);
+            }
+        }
+
+        if(IMAGE != null) {
+            gx.drawImage(IMAGE, x, y, null);
+        }
+    }
+    --------------------------------------------------------------------------------
