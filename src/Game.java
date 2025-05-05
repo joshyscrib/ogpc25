@@ -126,7 +126,7 @@ public class Game extends JPanel {
                 } else if (e.getButton() == MouseEvent.BUTTON3) {
                     // Right click: Cycle tile type
                     tilePlaceType++;
-                    if (tilePlaceType > 5) {
+                    if (tilePlaceType > 10) {
                         tilePlaceType = 1;
                     }
                 }
@@ -162,6 +162,21 @@ public class Game extends JPanel {
             case 5:
                 tiles[col][row] = new DoorTile();
                 break;
+            case 6:
+                tiles[col][row] = new PaintingTile1();
+                break;
+            case 7:
+                tiles[col][row] = new PaintingTile2();
+                break;
+            case 8:
+                tiles[col][row] = new PaintingTile3();
+                break;
+            case 9:
+                tiles[col][row] = new PaintingTile4();
+                break;
+            case 10:
+                tiles[col][row] = new BarrierTile();
+                break;
         }
     }
 
@@ -196,6 +211,7 @@ public class Game extends JPanel {
 
             }
         }
+
        load();
     }
     public void load(){
@@ -227,6 +243,21 @@ public class Game extends JPanel {
                     break;
                 case 5:
                     tiles[col][row] = new DoorTile();
+                    break;
+                case 6:
+                    tiles[col][row] = new PaintingTile1();
+                    break;
+                case 7:
+                    tiles[col][row] = new PaintingTile2();
+                    break;
+                case 8:
+                    tiles[col][row] = new PaintingTile3();
+                    break;
+                case 9:
+                    tiles[col][row] = new PaintingTile4();
+                    break;
+                case 10:
+                    tiles[col][row] = new BarrierTile();
                     break;
             }
             tiles[col][row].x = col;
@@ -357,6 +388,7 @@ public class Game extends JPanel {
                                 crateCollision = true;
                             }
                         }
+                        
                         if (!tiles[(o.x + o.width + 1) / TILE_SIZE][(o.y + (o.height - 2)) / TILE_SIZE].isSolid) {
                             if (CollisionDetection.DoThingsCollide(new Position(targetX, player.y), player.width, player.height, new Position(o.x, o.y + 5), o.width, o.height)) {
                                 if(player.y + player.height >= o.y + o.height - 6 && player.y + player.height <= o.y + o.height + 6 && o.getClass() == Crate.class){
@@ -472,8 +504,6 @@ public class Game extends JPanel {
                     if (CollisionDetection.DoThingsCollide(new Position(player.x, player.y), player.width, player.height, new Position(o.x, o.y ), o.width, o.height)) {
                         crateCollide = true;
                         player.y = o.y - player.height - 1;
-                    } else {
-                        crateCollide = false;
                     }
                 }
             }
@@ -536,7 +566,7 @@ public class Game extends JPanel {
         int endCol = Math.min(gridCols, (cameraX + screenWidth) / TILE_SIZE + 1);
         int startRow = Math.max(0, cameraY / TILE_SIZE);
         int endRow = Math.min(gridRows, (cameraY + screenHeight) / TILE_SIZE + 1);
-
+        ArrayList<Position> paintingsToDraw = new ArrayList<Position>();
         // Draw tiles in the visible range
         for (int col = startCol; col < endCol; col++) {
             for (int row = startRow; row < endRow; row++) {
@@ -544,10 +574,16 @@ public class Game extends JPanel {
 
                 switch (tile.tileType) {
                     case 1 -> g.setColor(new Color(118, 77, 70));
-                    case 2 -> g.setColor(new Color(10, 190, 30));
+                    case 2 -> g.setColor(new Color(0, 0, 0));
                     case 3 -> g.setColor(new Color(70, 47, 40));
                     case 4 -> g.setColor(new Color(255, 1, 1));
                     case 5 -> g.setColor(new Color(30,150,250));
+                    case 6 -> paintingsToDraw.add(new Position(col, row));
+                    case 7 -> paintingsToDraw.add(new Position(col, row));
+                    case 8 -> paintingsToDraw.add(new Position(col, row));
+                    case 9 -> paintingsToDraw.add(new Position(col, row));
+                    case 10 -> g.setColor(new Color(0,0,0,0));
+
                 }
 
                 int drawX = col * TILE_SIZE - cameraX;
@@ -556,11 +592,15 @@ public class Game extends JPanel {
                 tile.drawTile(drawX, drawY, g);
 
 
+
                 if (showGrid) {
                     g.setColor(Color.GRAY);
                     g.drawRect(drawX, drawY, TILE_SIZE, TILE_SIZE);
                 }
             }
+        }
+        for(Position t : paintingsToDraw){
+            tiles[t.x][t.y].drawTile(t.x * 32 - cameraX, t.y * 32 - cameraY, g);
         }
         for (Object o : objects) {
             o.Paint(o.x - cameraX, o.y - cameraY, g);

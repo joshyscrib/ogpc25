@@ -14,3 +14,34 @@ public void drawTile(int x, int y, Graphics gx) {
         }
     }
     --------------------------------------------------------------------------------
+    Tile
+   import javax.imageio.ImageIO;
+   import java.awt.*;
+   import java.awt.image.ImageObserver;
+   import java.net.URL;
+
+   public class TILETYPE extends Tile {
+       static Image TILEIMAGE;
+
+       public TILETYPE() {
+           isSolid = true;
+           tileType = 2;
+       }
+
+       public void drawTile(int x, int y, Graphics gx) {
+           if(TILEIMAGE == null){
+               try {
+                   TILEIMAGE = ImageIO.read(Game.class.getResource("FILE.png"));
+               }
+               catch(Exception ex){
+                   System.out.println(ex);
+               }
+           }
+
+           if(TILEIMAGE != null) {
+               gx.drawImage(TILEIMAGE, x, y, null);
+           }
+       }
+
+   }
+   ------------------------------------------------------------------------------
