@@ -26,7 +26,7 @@ public class Game extends JPanel {
     private int velocityY = 0;
     private boolean isJumping = false;
     public int curFloor = 1;
-    public int waterHeight;
+    public int waterHeight = 0;
     private boolean[] keys = new boolean[256];
     private boolean showGrid = false;
     private Tile[][] tiles;
@@ -388,7 +388,7 @@ public class Game extends JPanel {
                                 crateCollision = true;
                             }
                         }
-                        
+
                         if (!tiles[(o.x + o.width + 1) / TILE_SIZE][(o.y + (o.height - 2)) / TILE_SIZE].isSolid) {
                             if (CollisionDetection.DoThingsCollide(new Position(targetX, player.y), player.width, player.height, new Position(o.x, o.y + 5), o.width, o.height)) {
                                 if(player.y + player.height >= o.y + o.height - 6 && player.y + player.height <= o.y + o.height + 6 && o.getClass() == Crate.class){
