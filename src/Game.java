@@ -285,6 +285,7 @@ public class Game extends JPanel {
     }
     int lastCrate = 0;
     public void update() {
+        System.out.println("testtest33");
         lastCrate++;
         if (tiles[(int) Math.floor(player.x / TILE_SIZE)][(int) Math.floor((player.y + player.height) / TILE_SIZE)].tileType == 4) {
             respawn();
