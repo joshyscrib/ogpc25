@@ -1,3 +1,4 @@
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -22,6 +23,7 @@ public class Game extends JPanel {
     private int gridCols;
     private int mouseX;
     private int mouseY;
+    public int playerTick = 0;
 
     private int velocityY = 0;
     private boolean isJumping = false;
@@ -42,6 +44,15 @@ public class Game extends JPanel {
     public Integer[][] tileNums = new Integer[gridCols][gridRows];
     public ArrayList<Object> objects = new ArrayList<Object>();
     Player player;
+
+    Image player1;
+    Image playerL1;
+    Image player2;
+    Image playerL2;
+    Image player3;
+    Image playerL3;
+
+
     public Position spawnPoint = new Position(250, WORLD_HEIGHT - 450);
     public boolean respawning = false;
 
@@ -52,7 +63,7 @@ public class Game extends JPanel {
         System.out.println(screenWidth + " : " + screenHeight);
 
         //   tiles = new Tile[gridCols][gridRows];
-     //   initializeTiles();
+        //   initializeTiles();
 
         setFocusable(true);
 
@@ -139,7 +150,7 @@ public class Game extends JPanel {
             }
         });
         player = new Player(250, WORLD_HEIGHT - 450);
-        gridCols = WORLD_WIDTH / TILE_SIZE; // Update based on world size
+        gridCols = WORLD_WIDTH / TILE_SIZE;
         gridRows = WORLD_HEIGHT / TILE_SIZE;
         tiles = new Tile[gridCols][gridRows];
         initializeTiles();
@@ -182,7 +193,7 @@ public class Game extends JPanel {
     }
 
     public static void main(String[] args) {
-        JFrame frame = new JFrame("Game with Player and Floor");
+        JFrame frame = new JFrame("The Fate of Pittock Mansion");
         Game game = new Game();
 
         frame.setSize(game.screenWidth, game.screenHeight);
@@ -213,65 +224,70 @@ public class Game extends JPanel {
             }
         }
 
-       load();
+        load();
     }
-    public void load(){
+
+    public void load() {
         try {
-          String loadLvl =  Files.readString(Paths.get("C:\\Users\\josht\\OneDrive\\Documents\\GameLevels\\game1.txt"), StandardCharsets.UTF_8);
-        String[] stringArray = loadLvl.split(",");
-        for(int i = 0; i < stringArray.length; i++){
-            int col = 0;
-            int row = 0;
-         //   if(gridCols != 0){
-                col = i/gridRows;
-                row = i%gridRows;
-          //  }
+            String loadLvl = Files.readString(Paths.get("C:\\Users\\josht\\OneDrive\\Documents\\GameLevels\\game1.txt"), StandardCharsets.UTF_8);
+            String[] stringArray = loadLvl.split(",");
+            for (int i = 0; i < stringArray.length; i++) {
+                int col = 0;
+                int row = 0;
+                //   if(gridCols != 0){
+                col = i / gridRows;
+                row = i % gridRows;
+                //  }
 
-            int tileId = Integer.parseInt(stringArray[i]);
+                int tileId = Integer.parseInt(stringArray[i]);
 
-            switch(Integer.parseInt(stringArray[i])){
-                case 1:
-                    tiles[col][row] = new AirTile();
-                    break;
-                case 2:
-                    tiles[col][row] = new BlockTile();
-                    break;
-                case 3:
-                    tiles[col][row] = new BoundaryTile();
-                    break;
-                case 4:
-                    tiles[col][row] = new KillTile();
-                    break;
-                case 5:
-                    tiles[col][row] = new DoorTile();
-                    break;
-                case 6:
-                    tiles[col][row] = new PaintingTile1();
-                    break;
-                case 7:
-                    tiles[col][row] = new PaintingTile2();
-                    break;
-                case 8:
-                    tiles[col][row] = new PaintingTile3();
-                    break;
-                case 9:
-                    tiles[col][row] = new PaintingTile4();
-                    break;
-                case 10:
-                    tiles[col][row] = new BarrierTile();
-                    break;
+                switch (Integer.parseInt(stringArray[i])) {
+                    case 1:
+                        tiles[col][row] = new AirTile();
+                        break;
+                    case 2:
+                        tiles[col][row] = new BlockTile();
+                        break;
+                    case 3:
+                        tiles[col][row] = new BoundaryTile();
+                        break;
+                    case 4:
+                        tiles[col][row] = new KillTile();
+                        break;
+                    case 5:
+                        tiles[col][row] = new DoorTile();
+                        break;
+                    case 6:
+                        tiles[col][row] = new PaintingTile1();
+                        break;
+                    case 7:
+                        tiles[col][row] = new PaintingTile2();
+                        break;
+                    case 8:
+                        tiles[col][row] = new PaintingTile3();
+                        break;
+                    case 9:
+                        tiles[col][row] = new PaintingTile4();
+                        break;
+                    case 10:
+                        tiles[col][row] = new BarrierTile();
+                        break;
+                }
+                tiles[col][row].x = col;
+                tiles[col][row].y = row;
             }
-            tiles[col][row].x = col;
-            tiles[col][row].y = row;
-        }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
-    public void save(){
+
+    int curPlayerFrame = 0;
+    boolean playerLeft = false;
+
+    public void save() {
         StringBuilder tileSave = new StringBuilder();
-        for(int i = 0; i < gridCols; i++){
-            for(int j = 0; j < gridRows; j++){
+        for (int i = 0; i < gridCols; i++) {
+            for (int j = 0; j < gridRows; j++) {
                 tileSave.append(tiles[i][j].tileType);
                 tileSave.append(",");
             }
@@ -283,38 +299,57 @@ public class Game extends JPanel {
             throw new RuntimeException(e);
         }
     }
+
     int lastCrate = 0;
+    int waterTick = 0;
+
     public void update() {
-        System.out.println("testtest33");
+        playerTick++;
+        if(keys[KeyEvent.VK_A] || keys[KeyEvent.VK_D]){
+            if((playerTick % 6) == 0){
+                curPlayerFrame++;
+            }
+        }
+        if(curPlayerFrame > 2){
+            curPlayerFrame = 0;
+        }
+        waterTick++;
+        if (waterTick % 10 == 0) {
+            waterHeight++;
+        }
+        if (waterHeight >= 220) {
+            respawn();
+        }
         lastCrate++;
         if (tiles[(int) Math.floor(player.x / TILE_SIZE)][(int) Math.floor((player.y + player.height) / TILE_SIZE)].tileType == 4) {
             respawn();
 
         }
-        if(tiles[(int) Math.floor(player.x / TILE_SIZE + 1)][(int) Math.floor((player.y) / TILE_SIZE)].tileType == 5){
+        if (tiles[(int) Math.floor(player.x / TILE_SIZE + 1)][(int) Math.floor((player.y) / TILE_SIZE)].tileType == 5) {
             load();
         }
         boolean crateCollision = false;
 
         // Handle horizontal movement with collision detection
-        if(keys[KeyEvent.VK_ENTER]){
+        if (keys[KeyEvent.VK_ENTER]) {
             save();
         }
-        if(keys[KeyEvent.VK_L]){
+        if (keys[KeyEvent.VK_L]) {
             load();
         }
-        if(keys[KeyEvent.VK_1] && lastCrate > 20){
+        if (keys[KeyEvent.VK_1] && lastCrate > 20) {
             Crate crate = new Crate(player.x + player.width, player.y - 128);
             objects.add(crate);
             lastCrate = 0;
         }
 
-        if(keys[KeyEvent.VK_2] && lastCrate > 20        ){
+        if (keys[KeyEvent.VK_2] && lastCrate > 20) {
             SolidCrate scrate = new SolidCrate(player.x + player.width, player.y - 128);
             objects.add(scrate);
             lastCrate = 0;
         }
         if (keys[KeyEvent.VK_A]) {
+            playerLeft = true;
             // Move left
             int targetX = player.x - player.MOVE_SPEED;  // Target position if no collision
             int colLeft = targetX / TILE_SIZE;
@@ -331,16 +366,15 @@ public class Game extends JPanel {
                                 crateCollision = true;
                             }
                         }
-                                if (!tiles[(o.x - 1) / TILE_SIZE][(o.y + (o.height - 2)) / TILE_SIZE].isSolid) {
-                                    if (CollisionDetection.DoThingsCollide(new Position(targetX, player.y), player.width, player.height, new Position(o.x, o.y + 5), o.width, o.height)) {
-                                        if(player.y + player.height >= o.y + o.height - 6 && player.y + player.height <= o.y + o.height + 6 && o.getClass() == Crate.class){
-                                            o.x -= player.MOVE_SPEED;
-                                        }
-                                        else{
-                                            crateCollision = true;
-                                        }
-                                    }
+                        if (!tiles[(o.x - 1) / TILE_SIZE][(o.y + (o.height - 2)) / TILE_SIZE].isSolid) {
+                            if (CollisionDetection.DoThingsCollide(new Position(targetX, player.y), player.width, player.height, new Position(o.x, o.y + 5), o.width, o.height)) {
+                                if (player.y + player.height >= o.y + o.height - 6 && player.y + player.height <= o.y + o.height + 6 && o.getClass() == Crate.class) {
+                                    o.x -= player.MOVE_SPEED;
+                                } else {
+                                    crateCollision = true;
                                 }
+                            }
+                        }
 
 
                     }
@@ -361,8 +395,7 @@ public class Game extends JPanel {
 
                 if (!collision && !crateCollision) {
                     player.x = targetX;  // Move the player to the new position
-                }
-                else if(!crateCollision){
+                } else if (!crateCollision) {
                     // Stop the player at the left boundary of the wall
                     player.x = (colLeft + 1) * TILE_SIZE;
                 }
@@ -374,6 +407,7 @@ public class Game extends JPanel {
         }
 //test
         if (keys[KeyEvent.VK_D]) {
+            playerLeft = false;
             // Move right
             int targetX = player.x + player.MOVE_SPEED;  // Target position if no collision
             int colLeft = targetX / TILE_SIZE;
@@ -393,10 +427,9 @@ public class Game extends JPanel {
 
                         if (!tiles[(o.x + o.width + 1) / TILE_SIZE][(o.y + (o.height - 2)) / TILE_SIZE].isSolid) {
                             if (CollisionDetection.DoThingsCollide(new Position(targetX, player.y), player.width, player.height, new Position(o.x, o.y + 5), o.width, o.height)) {
-                                if(player.y + player.height >= o.y + o.height - 6 && player.y + player.height <= o.y + o.height + 6 && o.getClass() == Crate.class){
+                                if (player.y + player.height >= o.y + o.height - 6 && player.y + player.height <= o.y + o.height + 6 && o.getClass() == Crate.class) {
                                     o.x += player.MOVE_SPEED;
-                                }
-                                else{
+                                } else {
                                     crateCollision = true;
                                 }
                             }
@@ -418,7 +451,7 @@ public class Game extends JPanel {
                 }
                 if (!collision && !crateCollision) {
                     player.x = targetX;  // Move the player to the new position
-                } else if(!crateCollision){
+                } else if (!crateCollision) {
                     // Align the player to the left edge of the obstacle
                     player.x = colRight * TILE_SIZE - player.width;
                 }
@@ -503,7 +536,7 @@ public class Game extends JPanel {
             int colRight = (player.x + player.width - 1) / TILE_SIZE;
             for (Object o : objects) {
                 if (o.getClass() == Crate.class || o.getClass() == SolidCrate.class) {
-                    if (CollisionDetection.DoThingsCollide(new Position(player.x, player.y), player.width, player.height, new Position(o.x, o.y ), o.width, o.height)) {
+                    if (CollisionDetection.DoThingsCollide(new Position(player.x, player.y), player.width, player.height, new Position(o.x, o.y), o.width, o.height)) {
                         crateCollide = true;
                         player.y = o.y - player.height - 1;
                     }
@@ -557,6 +590,8 @@ public class Game extends JPanel {
         player.x = spawnPoint.x;
         player.y = spawnPoint.y;
         respawning = true;
+        waterHeight = 0;
+        waterTick = 0;
     }
 
     @Override
@@ -569,6 +604,7 @@ public class Game extends JPanel {
         int startRow = Math.max(0, cameraY / TILE_SIZE);
         int endRow = Math.min(gridRows, (cameraY + screenHeight) / TILE_SIZE + 1);
         ArrayList<Position> paintingsToDraw = new ArrayList<Position>();
+        ArrayList<Position> boundariesToDraw = new ArrayList<Position>();
         // Draw tiles in the visible range
         for (int col = startCol; col < endCol; col++) {
             for (int row = startRow; row < endRow; row++) {
@@ -576,15 +612,15 @@ public class Game extends JPanel {
 
                 switch (tile.tileType) {
                     case 1 -> g.setColor(new Color(118, 77, 70));
-                    case 2 -> g.setColor(new Color(0, 0, 0));
-                    case 3 -> g.setColor(new Color(70, 47, 40));
+                    case 2 -> g.setColor(new Color(40, 20, 20));
+                    case 3 -> boundariesToDraw.add(new Position(col, row));
                     case 4 -> g.setColor(new Color(255, 1, 1));
-                    case 5 -> g.setColor(new Color(30,150,250));
+                    case 5 -> g.setColor(new Color(30, 150, 250));
                     case 6 -> paintingsToDraw.add(new Position(col, row));
                     case 7 -> paintingsToDraw.add(new Position(col, row));
                     case 8 -> paintingsToDraw.add(new Position(col, row));
                     case 9 -> paintingsToDraw.add(new Position(col, row));
-                    case 10 -> g.setColor(new Color(0,0,0,0));
+                    case 10 -> g.setColor(new Color(0, 0, 0, 0));
 
                 }
 
@@ -594,23 +630,126 @@ public class Game extends JPanel {
                 tile.drawTile(drawX, drawY, g);
 
 
-
                 if (showGrid) {
                     g.setColor(Color.GRAY);
                     g.drawRect(drawX, drawY, TILE_SIZE, TILE_SIZE);
                 }
             }
         }
-        for(Position t : paintingsToDraw){
+        // paintings
+        for (Position t : paintingsToDraw) {
             tiles[t.x][t.y].drawTile(t.x * 32 - cameraX, t.y * 32 - cameraY, g);
         }
+        int playerDrawX = player.x - cameraX - 22;
+        int playerDrawY = player.y - cameraY;
+        if(playerLeft){
+            switch(curPlayerFrame){
+                case 0:
+                    if(playerL1 == null){
+                        try {
+                            playerL1 = ImageIO.read(Game.class.getResource("Peter1Left.png"));
+                        }
+                        catch(Exception ex){
+                            System.out.println(ex);
+                        }
+                    }
+
+                    if(playerL1 != null) {
+                        g.drawImage(playerL1, playerDrawX, playerDrawY, null);
+                    }
+                    break;
+                case 1:
+                    if(playerL2 == null){
+                        try {
+                            playerL2 = ImageIO.read(Game.class.getResource("Peter2Left.png"));
+                        }
+                        catch(Exception ex){
+                            System.out.println(ex);
+                        }
+                    }
+
+                    if(playerL2 != null) {
+                        g.drawImage(playerL2, playerDrawX, playerDrawY, null);
+                    }
+                    break;
+                case 2:
+                    if(playerL3 == null){
+                        try {
+                            playerL3 = ImageIO.read(Game.class.getResource("Peter3Left.png"));
+                        }
+                        catch(Exception ex){
+                            System.out.println(ex);
+                        }
+                    }
+
+                    if(playerL3 != null) {
+                        g.drawImage(playerL3, playerDrawX, playerDrawY, null);
+                    }
+                    break;
+            }
+        }
+        else{
+            switch(curPlayerFrame){
+                case 0:
+                    if(player1 == null){
+                        try {
+                            player1 = ImageIO.read(Game.class.getResource("Peter1.png"));
+                        }
+                        catch(Exception ex){
+                            System.out.println(ex);
+                        }
+                    }
+
+                    if(player1 != null) {
+                        g.drawImage(player1, playerDrawX, playerDrawY, null);
+                    }
+                    break;
+                case 1:
+                    if(player2 == null){
+                        try {
+                            player2 = ImageIO.read(Game.class.getResource("Peter2.png"));
+                        }
+                        catch(Exception ex){
+                            System.out.println(ex);
+                        }
+                    }
+
+                    if(player2 != null) {
+                        g.drawImage(player2, playerDrawX, playerDrawY, null);
+                    }
+                    break;
+                case 2:
+                    if(player3 == null){
+                        try {
+                            player3 = ImageIO.read(Game.class.getResource("Peter3.png"));
+                        }
+                        catch(Exception ex){
+                            System.out.println(ex);
+                        }
+                    }
+
+                    if(player3 != null) {
+                        g.drawImage(player3, playerDrawX, playerDrawY, null);
+                    }
+                    break;
+            }
+        }
+        // water
+        g.setColor(new Color(20, 170, 250, 40));
+        g.fillRect(0, (34 * TILE_SIZE) - waterHeight - cameraY, 9999999, screenHeight);
+        // borders
+        for (Position t : boundariesToDraw) {
+            tiles[t.x][t.y].drawTile(t.x * 32 - cameraX, t.y * 32 - cameraY, g);
+        }
+
         for (Object o : objects) {
             o.Paint(o.x - cameraX, o.y - cameraY, g);
         }
-        // Draw the player
-        int playerDrawX = player.x - cameraX;
-        int playerDrawY = player.y - cameraY;
-        g.setColor(Color.RED);
-        g.fillRect(playerDrawX, playerDrawY, player.width, player.height);
+
+        if ((34 * TILE_SIZE) - waterHeight - cameraY <= playerDrawY) {
+            g.setColor(new Color(80, 150, 255, 50));
+            g.fillRect(0, 0, screenWidth, screenHeight);
+        }
     }
+
 }
