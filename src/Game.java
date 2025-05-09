@@ -12,6 +12,11 @@ import java.util.ArrayList;
 
 
 public class Game extends JPanel {
+    public boolean dying = false;
+    public boolean darking = false;
+    public boolean lighting = false;
+
+    public int creditsY = 2500;
     private Clip clip;  // 👈 declared here so all methods can access it
     private static final int TILE_SIZE = 32;
     private float volume = 0;
@@ -26,7 +31,7 @@ public class Game extends JPanel {
     private int mouseX;
     private int mouseY;
     public int playerTick = 0;
-
+    int deathOpacity = 0;
     private int velocityY = 0;
     private boolean isJumping = false;
     public int curFloor = 1;
@@ -39,12 +44,15 @@ public class Game extends JPanel {
     private boolean placingTile = false;
     private boolean mousePressed = false;
     public int tilePlaceType = 1;
+    public boolean paused = true;
+    Hud hud = new Hud();
     private static final int WORLD_WIDTH = 4562; // Larger world width
     private static final int WORLD_HEIGHT = 1312; // Larger world height
     private int cameraX = 0; // Camera position
     private int cameraY = 128;
     public Integer[][] tileNums = new Integer[gridCols][gridRows];
-    public ArrayList<Object> objects = new ArrayList<Object>();
+    public ArrayList<Object> objects = new ArrayList<>();
+    public boolean title = true;
     Player player;
     Grandma grandma = new Grandma();
     Grandpa grandpa = new Grandpa();
@@ -57,15 +65,20 @@ public class Game extends JPanel {
     Image playerL2;
     Image player3;
     Image playerL3;
-
+    public boolean credits = false;
+    static Image creditImg;
 
     public Position spawnPoint = new Position(250, WORLD_HEIGHT - 450);
     public boolean respawning = false;
-
+    public void startGame(){
+        title = false;
+        paused = false;
+    }
     public Game() {
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
         screenWidth = screenSize.width - WINDOW_MARGIN;
         screenHeight = screenSize.height - WINDOW_MARGIN;
+        creditsY = screenHeight;
         System.out.println(screenWidth + " : " + screenHeight);
 
         //   tiles = new Tile[gridCols][gridRows];
@@ -74,9 +87,11 @@ public class Game extends JPanel {
         setFocusable(true);
 
         // Add key listener for movement and jumping
+
         addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
+                startGame();
                 keys[e.getKeyCode()] = true;
                 if (e.getKeyCode() == KeyEvent.VK_G) {
                     showGrid = !showGrid;
@@ -395,7 +410,7 @@ public class Game extends JPanel {
     boolean playerLeft = false;
 
     public void save(int level) {
-        StringBuilder tileSave = new StringBuilder();
+        /*StringBuilder tileSave = new StringBuilder();
         for (int i = 0; i < gridCols; i++) {
             for (int j = 0; j < gridRows; j++) {
                 tileSave.append(tiles[i][j].tileType);
@@ -408,7 +423,7 @@ public class Game extends JPanel {
             Files.writeString(Paths.get("C:\\Users\\josht\\OneDrive\\Documents\\GameLevels\\game" + level + ".txt"), tileNums, StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new RuntimeException(e);
-        }
+        } */
     }
 
     int lastCrate = 0;
@@ -589,8 +604,25 @@ public class Game extends JPanel {
         }
         respawn();
     }
+    public void win(){
+        credits = true;
+    }
 
     public void update() {
+        if(!player.alive && deathOpacity < 255){
+            deathOpacity++;
+        }
+        if(player.alive && deathOpacity > 0){
+            deathOpacity--;
+        }
+        if(credits){
+            paused = true;
+            creditsY -= 2;
+            if(creditsY < 0 - 1795 * 4){
+                System.exit(0);
+            }
+        }
+
         playerTick++;
         if (keys[KeyEvent.VK_A] || keys[KeyEvent.VK_D]) {
             if ((playerTick % 6) == 0) {
@@ -601,6 +633,7 @@ public class Game extends JPanel {
             curPlayerFrame = 0;
         }
         if (keys[KeyEvent.VK_P]) {
+
             for (Object c : objects) {
                 if (c.getClass() == Crate.class) {
                     System.out.println("Crate, " + c.x + " : " + c.y);
@@ -612,20 +645,25 @@ public class Game extends JPanel {
             System.out.println("END---------------END-------------------END----------------------END");
         }
         waterTick++;
-        if (waterTick % 10 == 0) {
+        if (waterTick % 10 == 0 && !paused) {
             waterHeight++;
         }
         if (timeDrowning >= 175) {
-            respawn();
+            die();
         }
 
         lastCrate++;
         if (tiles[(int) Math.floor(player.x / TILE_SIZE)][(int) Math.floor((player.y + player.height) / TILE_SIZE)].tileType == 4) {
-            respawn();
+            die();
 
         }
         if (tiles[(int) Math.floor(player.x / TILE_SIZE + 1)][(int) Math.floor((player.y) / TILE_SIZE)].tileType == 5) {
-            load(curFloor + 1);
+            if(curFloor == 3){
+                win();
+            }
+            else{
+                load(curFloor + 1);
+            }
         }
         boolean crateCollision = false;
 
@@ -663,7 +701,7 @@ public class Game extends JPanel {
             objects.add(scrate);
             lastCrate = 0;
         }
-        if (keys[KeyEvent.VK_A]) {
+        if (keys[KeyEvent.VK_A] && !paused) {
             playerLeft = true;
             // Move left
             int targetX = player.x - player.MOVE_SPEED;  // Target position if no collision
@@ -702,7 +740,7 @@ public class Game extends JPanel {
                         break;
                     }
                     if (tiles[colLeft][row].tileType == 4 || tiles[colRight][row].tileType == 4) {
-                        respawn();
+                        die();
                         targetX = player.x;
                         break;
                     }
@@ -727,7 +765,7 @@ public class Game extends JPanel {
         if (CollisionDetection.DoThingsCollide(new Position(player.x, player.y), 32, 64, new Position(grandpa.x + 15, grandpa.y), 100, 128)) {
             jumpScare(true);
         }
-        if (keys[KeyEvent.VK_D]) {
+        if (keys[KeyEvent.VK_D] && !paused) {
             playerLeft = false;
             // Move right
             int targetX = player.x + player.MOVE_SPEED;  // Target position if no collision
@@ -765,7 +803,8 @@ public class Game extends JPanel {
                         break;
                     }
                     if (tiles[colRight][row].tileType == 4) {
-                        respawn();
+                        player.alive = false;
+                        die();
                         targetX = player.x;
                         break;
                     }
@@ -778,7 +817,7 @@ public class Game extends JPanel {
                 }
             }
         }
-        if (curFloor == 3) {
+        if (curFloor == 3 && !paused) {
             if (grandpa.direction == Direction.Left) {
                 grandpa.x -= 4;
                 if (grandpa.x <= 0) {
@@ -934,7 +973,7 @@ public class Game extends JPanel {
         }
 
         // Jumping mechanic
-        if (keys[KeyEvent.VK_SPACE] && !isJumping) {
+        if (keys[KeyEvent.VK_SPACE] && !isJumping && !paused) {
             playSoundEffect("/jump.wav");
             velocityY = player.JUMP_STRENGTH;
             isJumping = true;
@@ -946,6 +985,7 @@ public class Game extends JPanel {
 
     // testing
     public void respawn() {
+        player.alive = true;
         timeDrowning = 0;
         grandma.x = -250;
         grandpa.x = 4500;
@@ -955,11 +995,19 @@ public class Game extends JPanel {
         waterHeight = 0;
         waterTick = 0;
     }
+    public void die(){
+        paused = true;
+        player.alive = false;
 
+    }
+    static Image titleImage;
     @Override
     protected void paintComponent(Graphics g) {
+
         super.paintComponent(g);
 
+        g.setColor(new Color(80,40,17));
+        g.fillRect(0,0,5000,5000);
         // Calculate visible tile range
         int startCol = Math.max(0, cameraX / TILE_SIZE);
         int endCol = Math.min(gridCols, (cameraX + screenWidth) / TILE_SIZE + 1);
@@ -1122,12 +1170,49 @@ public class Game extends JPanel {
             g.fillRect(0, 0, screenWidth, screenHeight);
             timeDrowning++;
         }
-        if (scaring) {
+        else if(timeDrowning > 0){
+            if(playerTick % 14 == 0){
+                timeDrowning --;
+            }
+        }
+        hud.paint(-20, screenHeight - 300+32,175-timeDrowning, g);
+        if (scaring || !player.alive) {
             g.setColor(new Color(40, 40, 40, 145));
             g.fillRect(0, 0, 5000, 5000);
         }
         grandpaJump.paint(0, 0, g);
         grandmaJump.paint(0, 0, g);
+        if(title){
+            if(titleImage == null){
+                try {
+                    titleImage = ImageIO.read(Game.class.getResource("title.png"));
+                }
+                catch(Exception ex){
+                    System.out.println(ex);
+                }
+            }
+
+            if(titleImage != null) {
+                g.drawImage(titleImage, 0, 0,screenWidth, screenHeight, null);
+            }
+        }
+        if(credits){
+            if(creditImg == null){
+                try {
+                    creditImg = ImageIO.read(Game.class.getResource("gameCredits.png"));
+                }
+                catch(Exception ex){
+                    System.out.println(ex);
+                }
+            }
+
+            if(creditImg != null) {
+                g.drawImage(creditImg, 0, creditsY,screenWidth, 1700 * 4, null);
+            }
+        }
+        g.setColor(new Color(10,10,10,deathOpacity));
+        g.fillRect(0,0,10000,10000);
     }
+
 
 }
