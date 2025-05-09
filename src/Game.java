@@ -123,6 +123,10 @@ public class Game extends JPanel {
                     mouseX = e.getX();
                     mouseY = e.getY();
                 }
+                if(title){
+                    paused = false;
+                }
+                title = false;
             }
 
             @Override
@@ -150,19 +154,19 @@ public class Game extends JPanel {
                 int col = adjustedMouseX / TILE_SIZE;
                 int row = adjustedMouseY / TILE_SIZE;
 
-                if (e.getButton() == MouseEvent.BUTTON1) {
-                    // Left click: Place tile
-                    if (col >= 0 && col < gridCols && row >= 0 && row < gridRows) {
-                        placingTile = true;
-                        placeTile(tilePlaceType, col, row);
-                    }
-                } else if (e.getButton() == MouseEvent.BUTTON3) {
-                    // Right click: Cycle tile type
-                    tilePlaceType++;
-                    if (tilePlaceType > 10) {
-                        tilePlaceType = 1;
-                    }
-                }
+                //if (e.getButton() == MouseEvent.BUTTON1) {
+                //    // Left click: Place tile
+                //    if (col >= 0 && col < gridCols && row >= 0 && row < gridRows) {
+                 //       placingTile = true;
+                 //       placeTile(tilePlaceType, col, row);
+                //    }
+               // } else if (e.getButton() == MouseEvent.BUTTON3) {
+               //     // Right click: Cycle tile type
+                //    tilePlaceType++;
+                //    if (tilePlaceType > 10) {
+               ///         tilePlaceType = 1;
+                //    }
+              //  }
             }
 
             @Override
@@ -609,12 +613,6 @@ public class Game extends JPanel {
     }
 
     public void update() {
-        if(!player.alive && deathOpacity < 255){
-            deathOpacity++;
-        }
-        if(player.alive && deathOpacity > 0){
-            deathOpacity--;
-        }
         if(credits){
             paused = true;
             creditsY -= 2;
@@ -962,8 +960,9 @@ public class Game extends JPanel {
             }
 
             // Update the player position if no collision
-            player.y = nextY;
-            remaining -= move;
+                player.y = nextY;
+                remaining -= move;
+
         }
 
         // Prevent player from moving off-screen horizontally
@@ -996,8 +995,7 @@ public class Game extends JPanel {
         waterTick = 0;
     }
     public void die(){
-        paused = true;
-        player.alive = false;
+        respawn();
 
     }
     static Image titleImage;
