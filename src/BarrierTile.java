@@ -12,4 +12,10 @@ public class BarrierTile extends Tile {
 
     public void drawTile(int x, int y, Graphics gx) {
         /*bovobovobovobovobovobovo*/
- }}
+ }
+
+    @Override
+    void drawPainting(int x, int y, boolean second, Graphics gx) {
+
+    }
+}

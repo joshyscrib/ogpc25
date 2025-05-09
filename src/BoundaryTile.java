@@ -24,4 +24,9 @@ public class BoundaryTile extends Tile{
         }
     }
 
+    @Override
+    void drawPainting(int x, int y, boolean second, Graphics gx) {
+
+    }
+
 }

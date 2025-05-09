@@ -1,7 +1,8 @@
+import javax.imageio.ImageIO;
 import java.awt.*;
 
 public class Crate extends Object{
-
+    Image crateImage;
     public Crate(int placeX, int placeY){
         moveable = false;
         size = 96;
@@ -16,7 +17,17 @@ public class Crate extends Object{
 
     @Override
     public void Paint(int paintX, int paintY, Graphics g) {
-        g.setColor(new Color(255, 165, 10));
-        g.fillRect(paintX, paintY, size, size);
+        if(crateImage == null){
+            try {
+                crateImage = ImageIO.read(Game.class.getResource("Crate.png"));
+            }
+            catch(Exception ex){
+                System.out.println(ex);
+            }
+        }
+
+        if(crateImage != null) {
+            g.drawImage(crateImage, paintX, paintY, null);
+        }
     }
 }

@@ -11,6 +11,7 @@ public abstract class Tile extends Entity{
 
     }
      abstract void drawTile(int x, int y, Graphics gx);
+    abstract void drawPainting(int x, int y, boolean second, Graphics gx);
     public Image loadImage(String filePath){
         Image img = null;
         try {

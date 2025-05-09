@@ -23,4 +23,9 @@ public class AirTile extends Tile{
             gx.drawImage(wallpaperImage, x, y, null);
         }
     }
+
+    @Override
+    void drawPainting(int x, int y, boolean second, Graphics gx) {
+
+    }
 }

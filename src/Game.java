@@ -1,9 +1,10 @@
 import javax.imageio.ImageIO;
+import javax.sound.sampled.*;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.File;
 import java.io.IOException;
-import java.lang.annotation.Target;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -11,8 +12,9 @@ import java.util.ArrayList;
 
 
 public class Game extends JPanel {
+    private Clip clip;  // 👈 declared here so all methods can access it
     private static final int TILE_SIZE = 32;
-
+    private float volume = 0;
     private static final int GRAVITY = 4;
 
     private static final int WINDOW_MARGIN = 50;
@@ -32,7 +34,7 @@ public class Game extends JPanel {
     private boolean[] keys = new boolean[256];
     private boolean showGrid = false;
     private Tile[][] tiles;
-
+    public int timeDrowning = 0;
 
     private boolean placingTile = false;
     private boolean mousePressed = false;
@@ -44,7 +46,11 @@ public class Game extends JPanel {
     public Integer[][] tileNums = new Integer[gridCols][gridRows];
     public ArrayList<Object> objects = new ArrayList<Object>();
     Player player;
-
+    Grandma grandma = new Grandma();
+    Grandpa grandpa = new Grandpa();
+    GrandmaJump grandmaJump = new GrandmaJump();
+    GrandpaJump grandpaJump = new GrandpaJump();
+    int ghostframe = 0;
     Image player1;
     Image playerL1;
     Image player2;
@@ -156,6 +162,51 @@ public class Game extends JPanel {
         initializeTiles();
     }
 
+    public void PlayMusic(String file) {
+        try {
+            if (clip != null) {
+                clip.stop();
+            }
+            AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(getClass().getResource(file));
+            clip = AudioSystem.getClip();
+            clip.open(audioInputStream);
+            clip.loop(Clip.LOOP_CONTINUOUSLY);
+            clip.start();
+            setVolume(-0.10f);
+            System.out.println("Music started!");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void playSoundEffect(String filepath) {
+        new Thread(() -> {
+            try {
+                AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(getClass().getResource(filepath));
+                Clip soundClip = AudioSystem.getClip();
+                soundClip.open(audioInputStream);
+                soundClip.start();
+
+                // auto close the clip when done
+                soundClip.addLineListener(event -> {
+                    if (event.getType() == LineEvent.Type.STOP) {
+                        soundClip.close();
+                    }
+                });
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+
+    public void setVolume(float decibels) {
+        if (clip != null) {
+            FloatControl gainControl = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
+            gainControl.setValue(decibels);
+        }
+    }
+
     public void placeTile(int type, int col, int row) {
 
         switch (type) {
@@ -208,7 +259,29 @@ public class Game extends JPanel {
         timer.start();
     }
 
+    public ArrayList<Position> cratesLvl1 = new ArrayList<Position>();
+    public ArrayList<Position> cratesLvl2 = new ArrayList<Position>();
+    public ArrayList<Position> cratesLvl3 = new ArrayList<Position>();
+
     private void initializeTiles() {
+        grandma.x = -35;
+        grandma.y = 945;
+        grandpa.x = gridCols * 31;
+        grandpa.y = 720;
+        PlayMusic("/bgmusic.wav");
+        // if x is even then solid
+        //if x is odd then moveable
+        cratesLvl1.add(new Position(462, 989));
+        cratesLvl1.add(new Position(2095, 989));
+
+        cratesLvl2.add(new Position(2248, 989));
+        cratesLvl2.add(new Position(3901, 989));
+
+        cratesLvl3.add(new Position(1061, 989));
+        cratesLvl3.add(new Position(3157, 989));
+        cratesLvl3.add(new Position(3758, 989));
+
+
         for (int col = 0; col < gridCols; col++) {
             for (int row = 0; row < gridRows; row++) {
 
@@ -224,24 +297,61 @@ public class Game extends JPanel {
             }
         }
 
-        load();
+        load(1);
+        curFloor = 1;
     }
 
-    public void load() {
+    public void load(int level) {
+        respawn();
+        curFloor = level;
+        waterHeight = 0;
+        waterTick = 0;
+        objects.clear();
+        switch (level) {
+            case 1:
+
+                for (Position o : cratesLvl1) {
+                    if (o.x % 2 == 0) {
+                        objects.add(new SolidCrate(o.x, o.y));
+                    } else {
+                        objects.add(new Crate(o.x, o.y));
+                    }
+                }
+                ;
+                break;
+            case 2:
+                for (Position o : cratesLvl2) {
+                    if (o.x % 2 == 0) {
+                        objects.add(new SolidCrate(o.x, o.y));
+                    } else {
+                        objects.add(new Crate(o.x, o.y));
+                    }
+                }
+                ;
+                break;
+            case 3:
+                PlayMusic("/chasemusic.wav");
+                for (Position o : cratesLvl3) {
+                    if (o.x % 2 == 0) {
+                        objects.add(new SolidCrate(o.x, o.y));
+                    } else {
+                        objects.add(new Crate(o.x, o.y));
+                    }
+                }
+                ;
+                break;
+
+        }
         try {
-            String loadLvl = Files.readString(Paths.get("C:\\Users\\josht\\OneDrive\\Documents\\GameLevels\\game1.txt"), StandardCharsets.UTF_8);
+            String loadLvl = Files.readString(Paths.get("C:\\Users\\josht\\OneDrive\\Documents\\GameLevels\\game" + level + ".txt"), StandardCharsets.UTF_8);
             String[] stringArray = loadLvl.split(",");
             for (int i = 0; i < stringArray.length; i++) {
                 int col = 0;
                 int row = 0;
-                //   if(gridCols != 0){
                 col = i / gridRows;
                 row = i % gridRows;
-                //  }
-
                 int tileId = Integer.parseInt(stringArray[i]);
-
-                switch (Integer.parseInt(stringArray[i])) {
+                switch (tileId) {
                     case 1:
                         tiles[col][row] = new AirTile();
                         break;
@@ -284,7 +394,7 @@ public class Game extends JPanel {
     int curPlayerFrame = 0;
     boolean playerLeft = false;
 
-    public void save() {
+    public void save(int level) {
         StringBuilder tileSave = new StringBuilder();
         for (int i = 0; i < gridCols; i++) {
             for (int j = 0; j < gridRows; j++) {
@@ -293,8 +403,9 @@ public class Game extends JPanel {
             }
         }
         String tileNums = tileSave.toString();
+
         try {
-            Files.writeString(Paths.get("C:\\Users\\josht\\OneDrive\\Documents\\GameLevels\\game1.txt"), tileNums, StandardCharsets.UTF_8);
+            Files.writeString(Paths.get("C:\\Users\\josht\\OneDrive\\Documents\\GameLevels\\game" + level + ".txt"), tileNums, StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -302,48 +413,252 @@ public class Game extends JPanel {
 
     int lastCrate = 0;
     int waterTick = 0;
+    int jumpx = (screenWidth / 2) + 750 - 50;
+    int jumpy = (screenHeight / 2) + 120 - 50;
+    boolean scaring = false;
+
+    public void jumpScare(boolean granpa) {
+        playSoundEffect("/jumpscareah.wav");
+        scaring = true;
+        if (granpa) {
+            Timer timer = new Timer(90, null);  // fire every 20 ms
+            ActionListener[] actions = new ActionListener[20];
+
+            actions[0] = e -> {
+                grandpaJump.x1 = jumpx;
+                grandpaJump.y1 = jumpy;
+                timer.setActionCommand("1");
+            };
+            actions[1] = e -> {
+                grandpaJump.x1 = -2000;
+                grandpaJump.y1 = 1400;
+                grandpaJump.x2 = jumpx;
+                grandpaJump.y2 = jumpy;
+                timer.setActionCommand("2");
+            };
+            actions[2] = e -> {
+                grandpaJump.x2 = -2000;
+                grandpaJump.y2 = 1400;
+                grandpaJump.x3 = jumpx;
+                grandpaJump.y3 = jumpy;
+            };
+            actions[3] = e -> {
+                grandpaJump.x3 = -2000;
+                grandpaJump.y3 = 1400;
+                grandpaJump.x4 = jumpx;
+                grandpaJump.y4 = jumpy;
+            };
+            actions[4] = e -> {
+                grandpaJump.x4 = -2000;
+                grandpaJump.y4 = 1400;
+                grandpaJump.x5 = jumpx;
+                grandpaJump.y5 = jumpy;
+            };
+            actions[5] = e -> {
+                grandpaJump.x5 = -2000;
+                grandpaJump.y5 = 1400;
+                grandpaJump.x6 = jumpx;
+                grandpaJump.y6 = jumpy;
+            };
+            actions[6] = e -> {
+            };
+            actions[7] = e -> {
+            };
+            actions[8] = e -> {
+            };
+            actions[9] = e -> {
+            };
+            actions[10] = e -> {
+            };
+            actions[11] = e -> {
+            };
+            actions[12] = e -> {
+            };
+            actions[13] = e -> {
+            };
+            actions[14] = e -> {
+            };
+            actions[15] = e -> {
+            };
+            actions[16] = e -> {
+            };
+            actions[17] = e -> {
+            };
+            actions[18] = e -> {
+            };
+
+            actions[19] = e -> {
+                grandpaJump.x6 = -2000;
+                grandpaJump.y6 = 1400;
+                timer.stop();
+                scaring = false;
+            };
+
+            timer.addActionListener(new ActionListener() {
+                int step = 0;
+
+                public void actionPerformed(ActionEvent e) {
+                    actions[step].actionPerformed(e);
+                    step++;
+                }
+            });
+            timer.start();
+        } else {
+            Timer timer = new Timer(90, null);  // fire every 20 ms
+            ActionListener[] actions = new ActionListener[20];
+
+            actions[0] = e -> {
+                grandmaJump.x1 = jumpx;
+                grandmaJump.y1 = jumpy;
+                timer.setActionCommand("1");
+            };
+            actions[1] = e -> {
+                grandmaJump.x1 = -2000;
+                grandmaJump.y1 = 1400;
+                grandmaJump.x2 = jumpx;
+                grandmaJump.y2 = jumpy;
+                timer.setActionCommand("2");
+            };
+            actions[2] = e -> {
+                grandmaJump.x2 = -2000;
+                grandmaJump.y2 = 1400;
+                grandmaJump.x3 = jumpx;
+                grandmaJump.y3 = jumpy;
+            };
+            actions[3] = e -> {
+                grandmaJump.x3 = -2000;
+                grandmaJump.y3 = 1400;
+                grandmaJump.x4 = jumpx;
+                grandmaJump.y4 = jumpy;
+            };
+            actions[4] = e -> {
+                grandmaJump.x4 = -2000;
+                grandmaJump.y4 = 1400;
+                grandmaJump.x5 = jumpx;
+                grandmaJump.y5 = jumpy;
+            };
+            actions[5] = e -> {
+                grandmaJump.x5 = -2000;
+                grandmaJump.y5 = 1400;
+                grandmaJump.x6 = jumpx;
+                grandmaJump.y6 = jumpy;
+            };
+            actions[6] = e -> {
+            };
+            actions[7] = e -> {
+            };
+            actions[8] = e -> {
+            };
+            actions[9] = e -> {
+            };
+            actions[10] = e -> {
+            };
+            actions[11] = e -> {
+            };
+            actions[12] = e -> {
+            };
+            actions[13] = e -> {
+            };
+            actions[14] = e -> {
+            };
+            actions[15] = e -> {
+            };
+            actions[16] = e -> {
+            };
+            actions[17] = e -> {
+            };
+            actions[18] = e -> {
+            };
+
+            actions[19] = e -> {
+                grandmaJump.x6 = -2000;
+                grandmaJump.y6 = 1400;
+                timer.stop();
+                scaring = false;
+            };
+
+            timer.addActionListener(new ActionListener() {
+                int step = 0;
+
+                public void actionPerformed(ActionEvent e) {
+                    actions[step].actionPerformed(e);
+                    step++;
+                }
+            });
+            timer.start();
+        }
+        respawn();
+    }
 
     public void update() {
         playerTick++;
-        if(keys[KeyEvent.VK_A] || keys[KeyEvent.VK_D]){
-            if((playerTick % 6) == 0){
+        if (keys[KeyEvent.VK_A] || keys[KeyEvent.VK_D]) {
+            if ((playerTick % 6) == 0) {
                 curPlayerFrame++;
             }
         }
-        if(curPlayerFrame > 2){
+        if (curPlayerFrame > 2) {
             curPlayerFrame = 0;
+        }
+        if (keys[KeyEvent.VK_P]) {
+            for (Object c : objects) {
+                if (c.getClass() == Crate.class) {
+                    System.out.println("Crate, " + c.x + " : " + c.y);
+                }
+                if (c.getClass() == SolidCrate.class) {
+                    System.out.println("Solid, " + c.x + " : " + c.y);
+                }
+            }
+            System.out.println("END---------------END-------------------END----------------------END");
         }
         waterTick++;
         if (waterTick % 10 == 0) {
             waterHeight++;
         }
-        if (waterHeight >= 220) {
+        if (timeDrowning >= 175) {
             respawn();
         }
+
         lastCrate++;
         if (tiles[(int) Math.floor(player.x / TILE_SIZE)][(int) Math.floor((player.y + player.height) / TILE_SIZE)].tileType == 4) {
             respawn();
 
         }
         if (tiles[(int) Math.floor(player.x / TILE_SIZE + 1)][(int) Math.floor((player.y) / TILE_SIZE)].tileType == 5) {
-            load();
+            load(curFloor + 1);
         }
         boolean crateCollision = false;
 
         // Handle horizontal movement with collision detection
         if (keys[KeyEvent.VK_ENTER]) {
-            save();
+            if (keys[KeyEvent.VK_1]) {
+                save(1);
+            }
+            if (keys[KeyEvent.VK_2]) {
+                save(2);
+            }
+            if (keys[KeyEvent.VK_3]) {
+                save(3);
+            }
         }
         if (keys[KeyEvent.VK_L]) {
-            load();
+            if (keys[KeyEvent.VK_1]) {
+                load(1);
+            }
+            if (keys[KeyEvent.VK_2]) {
+                load(2);
+            }
+            if (keys[KeyEvent.VK_3]) {
+                load(3);
+            }
         }
-        if (keys[KeyEvent.VK_1] && lastCrate > 20) {
+        if (keys[KeyEvent.VK_C] && lastCrate > 20) {
             Crate crate = new Crate(player.x + player.width, player.y - 128);
             objects.add(crate);
             lastCrate = 0;
         }
 
-        if (keys[KeyEvent.VK_2] && lastCrate > 20) {
+        if (keys[KeyEvent.VK_V] && lastCrate > 20) {
             SolidCrate scrate = new SolidCrate(player.x + player.width, player.y - 128);
             objects.add(scrate);
             lastCrate = 0;
@@ -406,6 +721,12 @@ public class Game extends JPanel {
             }
         }
 //test
+        if (CollisionDetection.DoThingsCollide(new Position(player.x, player.y), 32, 64, new Position(grandma.x + 15, grandma.y), 100, 128)) {
+            jumpScare(false);
+        }
+        if (CollisionDetection.DoThingsCollide(new Position(player.x, player.y), 32, 64, new Position(grandpa.x + 15, grandpa.y), 100, 128)) {
+            jumpScare(true);
+        }
         if (keys[KeyEvent.VK_D]) {
             playerLeft = false;
             // Move right
@@ -457,7 +778,44 @@ public class Game extends JPanel {
                 }
             }
         }
-
+        if (curFloor == 3) {
+            if (grandpa.direction == Direction.Left) {
+                grandpa.x -= 4;
+                if (grandpa.x <= 0) {
+                    grandpa.direction = Direction.Right;
+                }
+                if (grandpa.x >= gridCols * 32) {
+                    grandpa.direction = Direction.Left;
+                }
+            }
+            if (grandpa.direction == Direction.Right) {
+                grandpa.x += 4;
+                if (grandpa.x <= 0) {
+                    grandpa.direction = Direction.Right;
+                }
+                if (grandpa.x >= gridCols * 32) {
+                    grandpa.direction = Direction.Left;
+                }
+            }
+            if (grandma.direction == Direction.Left) {
+                grandma.x -= 3;
+                if (grandma.x <= 0) {
+                    grandma.direction = Direction.Right;
+                }
+                if (grandma.x >= gridCols * 32) {
+                    grandma.direction = Direction.Left;
+                }
+            }
+            if (grandma.direction == Direction.Right) {
+                grandma.x += 3;
+                if (grandma.x <= 0) {
+                    grandma.direction = Direction.Right;
+                }
+                if (grandma.x >= gridCols * 32) {
+                    grandma.direction = Direction.Left;
+                }
+            }
+        }
         for (Object o : objects) {
             int targetX = 0;
             int targetY = 0;
@@ -577,6 +935,7 @@ public class Game extends JPanel {
 
         // Jumping mechanic
         if (keys[KeyEvent.VK_SPACE] && !isJumping) {
+            playSoundEffect("/jump.wav");
             velocityY = player.JUMP_STRENGTH;
             isJumping = true;
         }
@@ -587,6 +946,9 @@ public class Game extends JPanel {
 
     // testing
     public void respawn() {
+        timeDrowning = 0;
+        grandma.x = -250;
+        grandpa.x = 4500;
         player.x = spawnPoint.x;
         player.y = spawnPoint.y;
         respawning = true;
@@ -615,7 +977,7 @@ public class Game extends JPanel {
                     case 2 -> g.setColor(new Color(40, 20, 20));
                     case 3 -> boundariesToDraw.add(new Position(col, row));
                     case 4 -> g.setColor(new Color(255, 1, 1));
-                    case 5 -> g.setColor(new Color(30, 150, 250));
+                    case 5 -> boundariesToDraw.add(new Position(col, row));
                     case 6 -> paintingsToDraw.add(new Position(col, row));
                     case 7 -> paintingsToDraw.add(new Position(col, row));
                     case 8 -> paintingsToDraw.add(new Position(col, row));
@@ -638,97 +1000,106 @@ public class Game extends JPanel {
         }
         // paintings
         for (Position t : paintingsToDraw) {
-            tiles[t.x][t.y].drawTile(t.x * 32 - cameraX, t.y * 32 - cameraY, g);
+            if (t.x % 2 == 0) {
+                tiles[t.x][t.y].drawPainting(t.x * 32 - cameraX, t.y * 32 - cameraY, true, g);
+            } else {
+                tiles[t.x][t.y].drawPainting(t.x * 32 - cameraX, t.y * 32 - cameraY, false, g);
+            }
+        }
+        if (curFloor == 3) {
+            if (waterTick % 12 == 0) {
+                ghostframe++;
+            }
+            if (ghostframe % 2 == 0) {
+                grandma.Paint(grandma.x - cameraX, grandma.y - cameraY, g, true);
+                grandpa.Paint(grandpa.x - cameraX, grandpa.y - cameraY, g, true);
+            } else {
+                grandma.Paint(grandma.x - cameraX, grandma.y - cameraY, g, false);
+                grandpa.Paint(grandpa.x - cameraX, grandpa.y - cameraY, g, false);
+            }
         }
         int playerDrawX = player.x - cameraX - 22;
         int playerDrawY = player.y - cameraY;
-        if(playerLeft){
-            switch(curPlayerFrame){
+        if (playerLeft) {
+            switch (curPlayerFrame) {
                 case 0:
-                    if(playerL1 == null){
+                    if (playerL1 == null) {
                         try {
                             playerL1 = ImageIO.read(Game.class.getResource("Peter1Left.png"));
-                        }
-                        catch(Exception ex){
+                        } catch (Exception ex) {
                             System.out.println(ex);
                         }
                     }
 
-                    if(playerL1 != null) {
+                    if (playerL1 != null) {
                         g.drawImage(playerL1, playerDrawX, playerDrawY, null);
                     }
                     break;
                 case 1:
-                    if(playerL2 == null){
+                    if (playerL2 == null) {
                         try {
                             playerL2 = ImageIO.read(Game.class.getResource("Peter2Left.png"));
-                        }
-                        catch(Exception ex){
+                        } catch (Exception ex) {
                             System.out.println(ex);
                         }
                     }
 
-                    if(playerL2 != null) {
+                    if (playerL2 != null) {
                         g.drawImage(playerL2, playerDrawX, playerDrawY, null);
                     }
                     break;
                 case 2:
-                    if(playerL3 == null){
+                    if (playerL3 == null) {
                         try {
                             playerL3 = ImageIO.read(Game.class.getResource("Peter3Left.png"));
-                        }
-                        catch(Exception ex){
+                        } catch (Exception ex) {
                             System.out.println(ex);
                         }
                     }
 
-                    if(playerL3 != null) {
+                    if (playerL3 != null) {
                         g.drawImage(playerL3, playerDrawX, playerDrawY, null);
                     }
                     break;
             }
-        }
-        else{
-            switch(curPlayerFrame){
+        } else {
+            switch (curPlayerFrame) {
                 case 0:
-                    if(player1 == null){
+                    if (player1 == null) {
                         try {
                             player1 = ImageIO.read(Game.class.getResource("Peter1.png"));
-                        }
-                        catch(Exception ex){
+                        } catch (Exception ex) {
                             System.out.println(ex);
                         }
                     }
 
-                    if(player1 != null) {
+                    if (player1 != null) {
                         g.drawImage(player1, playerDrawX, playerDrawY, null);
                     }
                     break;
                 case 1:
-                    if(player2 == null){
+                    if (player2 == null) {
                         try {
                             player2 = ImageIO.read(Game.class.getResource("Peter2.png"));
-                        }
-                        catch(Exception ex){
+                        } catch (Exception ex) {
                             System.out.println(ex);
                         }
                     }
 
-                    if(player2 != null) {
+                    if (player2 != null) {
                         g.drawImage(player2, playerDrawX, playerDrawY, null);
                     }
                     break;
                 case 2:
-                    if(player3 == null){
+                    if (player3 == null) {
                         try {
                             player3 = ImageIO.read(Game.class.getResource("Peter3.png"));
-                        }
-                        catch(Exception ex){
+                        } catch (Exception ex) {
                             System.out.println(ex);
                         }
                     }
 
-                    if(player3 != null) {
+                    if (player3 != null) {
                         g.drawImage(player3, playerDrawX, playerDrawY, null);
                     }
                     break;
@@ -749,7 +1120,14 @@ public class Game extends JPanel {
         if ((34 * TILE_SIZE) - waterHeight - cameraY <= playerDrawY) {
             g.setColor(new Color(80, 150, 255, 50));
             g.fillRect(0, 0, screenWidth, screenHeight);
+            timeDrowning++;
         }
+        if (scaring) {
+            g.setColor(new Color(40, 40, 40, 145));
+            g.fillRect(0, 0, 5000, 5000);
+        }
+        grandpaJump.paint(0, 0, g);
+        grandmaJump.paint(0, 0, g);
     }
 
 }
